@@ -1,0 +1,26 @@
+# Боевые зависимости сервиса (ядро работает и без них — см. README).
+# Установка: pip install -r requirements.txt
+
+# --- HTTP-сервис и наблюдаемость ---
+fastapi>=0.111
+uvicorn[standard]>=0.30
+prometheus-client>=0.20
+
+# --- Конфигурация и политики ---
+PyYAML>=6.0
+
+# --- Внешние вызовы: вебхуки алертинга, Wazuh Active Response ---
+httpx>=0.27
+
+# --- ML: загрузка дообученной модели классификации конфиденциальности ---
+scikit-learn>=1.4
+joblib>=1.4
+numpy>=1.26
+pandas>=2.2
+
+# --- Коннекторы к SIEM (включать по нужному источнику) ---
+elasticsearch>=8.13      # Wazuh Indexer / Elasticsearch / OpenSearch
+aiokafka>=0.10           # Kafka
+
+# --- Хранилище provenance для многонодового развёртывания (опционально) ---
+redis>=5.0

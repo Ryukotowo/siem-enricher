@@ -1,0 +1,58 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.env
+
+# Артефакты выполнения сервиса
+var/logs/*
+var/state/*
+!var/logs/.gitkeep
+!var/state/.gitkeep
+
+# Данные и артефакты ML (крупные файлы не коммитим)
+ml/data/raw/*
+ml/data/interim/*
+ml/data/processed/*
+ml/artifacts/*
+!ml/data/**/.gitkeep
+!ml/artifacts/.gitkeep
+
+# Промежуточные результаты обогащения
+*.jsonl
+!tests/fixtures/events/*.jsonl
+
+# IDE / ОС
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+htmlcov/
+.coverage
+# Служебные каталоги прогонов
+var/pip/
+var/demo/
+var/preview*/
+var/*checks.json
+*.whl
+
+# Результаты экспериментов: только актуальные
+var/experiment/*
+!var/experiment/.gitkeep
+!var/experiment/report_v10.json
+!var/experiment/report_attack.json
+!var/experiment/report_sigma_engine.json
+!var/experiment/report_ablation_rules.json
+!var/experiment/report_ablation_hybrid.json
+!var/experiment/report_holdout.json
+pip-build-tracker-*
+pip-ephem-wheel-cache-*
+pip-install-*
+pip-metadata-*
+pip-unpack-*

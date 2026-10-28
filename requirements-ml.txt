@@ -1,0 +1,13 @@
+# ML-зависимости для трансформер-классификатора конфиденциальности.
+# Установка: pip install -r requirements-ml.txt
+#
+# Для CPU-сборки PyTorch используется отдельный индекс — иначе pip скачает
+# сборку с поддержкой CUDA (~2.5 ГБ вместо ~250 МБ).
+
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+torch>=2.2
+transformers>=4.40
+joblib>=1.4
+scikit-learn>=1.4
+numpy>=1.26
