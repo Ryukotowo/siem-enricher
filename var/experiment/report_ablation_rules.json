@@ -1,0 +1,2012 @@
+{
+  "mode": "правила",
+  "total": 136,
+  "incidents": 88,
+  "benign": 48,
+  "baseline": {
+    "stats": {
+      "tp": 48,
+      "fp": 24,
+      "fn": 40,
+      "tn": 24
+    },
+    "recall": 0.5455,
+    "precision": 0.6667,
+    "fpr": 0.5,
+    "specificity": 0.5,
+    "f1": 0.6,
+    "accuracy": 0.5294,
+    "alerts": 72,
+    "recall_ci": [
+      0.4417,
+      0.6454
+    ]
+  },
+  "proposed": {
+    "stats": {
+      "tp": 88,
+      "fp": 8,
+      "fn": 0,
+      "tn": 40
+    },
+    "recall": 1.0,
+    "precision": 0.9167,
+    "fpr": 0.1667,
+    "specificity": 0.8333,
+    "f1": 0.9565,
+    "accuracy": 0.9412,
+    "alerts": 96,
+    "recall_ci": [
+      0.9582,
+      1.0
+    ],
+    "precision_ci": [
+      0.8441,
+      0.9572
+    ]
+  },
+  "prevented": 88,
+  "prevention_rate": 1.0,
+  "prevention_ci": [
+    0.9582,
+    1.0
+  ],
+  "alert_reduction": -0.3333,
+  "auc": 1.0,
+  "curve": [
+    {
+      "threshold": 0.1,
+      "recall": 1.0,
+      "fpr": 1.0,
+      "precision": 0.6471
+    },
+    {
+      "threshold": 0.2,
+      "recall": 1.0,
+      "fpr": 0.9792,
+      "precision": 0.6519
+    },
+    {
+      "threshold": 0.3,
+      "recall": 1.0,
+      "fpr": 0.9167,
+      "precision": 0.6667
+    },
+    {
+      "threshold": 0.4,
+      "recall": 1.0,
+      "fpr": 0.5625,
+      "precision": 0.7652
+    },
+    {
+      "threshold": 0.5,
+      "recall": 1.0,
+      "fpr": 0.1667,
+      "precision": 0.9167
+    },
+    {
+      "threshold": 0.6,
+      "recall": 1.0,
+      "fpr": 0.0208,
+      "precision": 0.9888
+    },
+    {
+      "threshold": 0.7,
+      "recall": 1.0,
+      "fpr": 0.0,
+      "precision": 1.0
+    },
+    {
+      "threshold": 0.8,
+      "recall": 0.7159,
+      "fpr": 0.0,
+      "precision": 1.0
+    },
+    {
+      "threshold": 0.85,
+      "recall": 0.4545,
+      "fpr": 0.0,
+      "precision": 1.0
+    },
+    {
+      "threshold": 0.9,
+      "recall": 0.1477,
+      "fpr": 0.0,
+      "precision": 1.0
+    }
+  ],
+  "by_kind": [
+    {
+      "kind": "benign_backup_archive",
+      "total": 8,
+      "incident": false,
+      "baseline_alert": 8,
+      "our_alert": 8,
+      "prevented": 0,
+      "level": 10
+    },
+    {
+      "kind": "benign_read_internal",
+      "total": 8,
+      "incident": false,
+      "baseline_alert": 0,
+      "our_alert": 0,
+      "prevented": 0,
+      "level": 4
+    },
+    {
+      "kind": "benign_read_public",
+      "total": 8,
+      "incident": false,
+      "baseline_alert": 0,
+      "our_alert": 0,
+      "prevented": 0,
+      "level": 2
+    },
+    {
+      "kind": "benign_upload_public",
+      "total": 8,
+      "incident": false,
+      "baseline_alert": 8,
+      "our_alert": 0,
+      "prevented": 0,
+      "level": 10
+    },
+    {
+      "kind": "benign_usb_public",
+      "total": 8,
+      "incident": false,
+      "baseline_alert": 8,
+      "our_alert": 0,
+      "prevented": 0,
+      "level": 10
+    },
+    {
+      "kind": "benign_write_draft",
+      "total": 8,
+      "incident": false,
+      "baseline_alert": 0,
+      "our_alert": 0,
+      "prevented": 0,
+      "level": 3
+    },
+    {
+      "kind": "exfil_mail_finance",
+      "total": 8,
+      "incident": true,
+      "baseline_alert": 8,
+      "our_alert": 8,
+      "prevented": 8,
+      "level": 12
+    },
+    {
+      "kind": "exfil_upload_archive",
+      "total": 8,
+      "incident": true,
+      "baseline_alert": 8,
+      "our_alert": 8,
+      "prevented": 8,
+      "level": 12
+    },
+    {
+      "kind": "exfil_usb_confidential",
+      "total": 8,
+      "incident": true,
+      "baseline_alert": 0,
+      "our_alert": 8,
+      "prevented": 8,
+      "level": 4
+    },
+    {
+      "kind": "exfil_webmail_confidential",
+      "total": 8,
+      "incident": true,
+      "baseline_alert": 0,
+      "our_alert": 8,
+      "prevented": 8,
+      "level": 5
+    },
+    {
+      "kind": "mass_copy_confidential",
+      "total": 8,
+      "incident": true,
+      "baseline_alert": 8,
+      "our_alert": 8,
+      "prevented": 8,
+      "level": 11
+    },
+    {
+      "kind": "mass_copy_confidential_low",
+      "total": 8,
+      "incident": true,
+      "baseline_alert": 0,
+      "our_alert": 8,
+      "prevented": 8,
+      "level": 7
+    },
+    {
+      "kind": "ransomware_encrypt",
+      "total": 8,
+      "incident": true,
+      "baseline_alert": 8,
+      "our_alert": 8,
+      "prevented": 8,
+      "level": 14
+    },
+    {
+      "kind": "secret_read_kdbx",
+      "total": 8,
+      "incident": true,
+      "baseline_alert": 0,
+      "our_alert": 8,
+      "prevented": 8,
+      "level": 6
+    },
+    {
+      "kind": "secret_read_key",
+      "total": 8,
+      "incident": true,
+      "baseline_alert": 8,
+      "our_alert": 8,
+      "prevented": 8,
+      "level": 12
+    },
+    {
+      "kind": "staging_archive_confidential",
+      "total": 8,
+      "incident": true,
+      "baseline_alert": 0,
+      "our_alert": 8,
+      "prevented": 8,
+      "level": 7
+    },
+    {
+      "kind": "usb_copy_confidential",
+      "total": 8,
+      "incident": true,
+      "baseline_alert": 8,
+      "our_alert": 8,
+      "prevented": 8,
+      "level": 10
+    }
+  ],
+  "rows": [
+    {
+      "kind": "benign_read_internal",
+      "incident": false,
+      "rule_level": 4,
+      "risk": 0.3074,
+      "severity": "medium",
+      "decision": "allow",
+      "sensitivity": "internal",
+      "confidence": 0.666,
+      "rules": []
+    },
+    {
+      "kind": "benign_write_draft",
+      "incident": false,
+      "rule_level": 3,
+      "risk": 0.3684,
+      "severity": "medium",
+      "decision": "allow",
+      "sensitivity": "internal",
+      "confidence": 0.606,
+      "rules": []
+    },
+    {
+      "kind": "benign_read_public",
+      "incident": false,
+      "rule_level": 2,
+      "risk": 0.1544,
+      "severity": "low",
+      "decision": "tag",
+      "sensitivity": "public",
+      "confidence": 0.546,
+      "rules": [
+        "POL-009"
+      ]
+    },
+    {
+      "kind": "benign_upload_public",
+      "incident": false,
+      "rule_level": 10,
+      "risk": 0.4544,
+      "severity": "medium",
+      "decision": "allow",
+      "sensitivity": "public",
+      "confidence": 0.546,
+      "rules": []
+    },
+    {
+      "kind": "benign_backup_archive",
+      "incident": false,
+      "rule_level": 10,
+      "risk": 0.5372,
+      "severity": "medium",
+      "decision": "alert",
+      "sensitivity": "internal",
+      "confidence": 0.606,
+      "rules": [
+        "POL-008"
+      ]
+    },
+    {
+      "kind": "benign_usb_public",
+      "incident": false,
+      "rule_level": 10,
+      "risk": 0.3381,
+      "severity": "medium",
+      "decision": "allow",
+      "sensitivity": "public",
+      "confidence": 0.666,
+      "rules": []
+    },
+    {
+      "kind": "exfil_usb_confidential",
+      "incident": true,
+      "rule_level": 4,
+      "risk": 0.7583,
+      "severity": "high",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.858,
+      "rules": [
+        "POL-011"
+      ]
+    },
+    {
+      "kind": "exfil_webmail_confidential",
+      "incident": true,
+      "rule_level": 5,
+      "risk": 0.8553,
+      "severity": "critical",
+      "decision": "mask",
+      "sensitivity": "confidential",
+      "confidence": 0.858,
+      "rules": [
+        "POL-001",
+        "POL-005",
+        "POL-008"
+      ]
+    },
+    {
+      "kind": "secret_read_kdbx",
+      "incident": true,
+      "rule_level": 6,
+      "risk": 0.8539,
+      "severity": "critical",
+      "decision": "block",
+      "sensitivity": "secret",
+      "confidence": 0.95,
+      "rules": [
+        "POL-002"
+      ]
+    },
+    {
+      "kind": "mass_copy_confidential_low",
+      "incident": true,
+      "rule_level": 7,
+      "risk": 0.7681,
+      "severity": "high",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.81,
+      "rules": [
+        "POL-012"
+      ]
+    },
+    {
+      "kind": "staging_archive_confidential",
+      "incident": true,
+      "rule_level": 7,
+      "risk": 0.919,
+      "severity": "critical",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.81,
+      "rules": [
+        "POL-013"
+      ]
+    },
+    {
+      "kind": "exfil_upload_archive",
+      "incident": true,
+      "rule_level": 12,
+      "risk": 0.8941,
+      "severity": "critical",
+      "decision": "mask",
+      "sensitivity": "confidential",
+      "confidence": 0.75,
+      "rules": [
+        "POL-001",
+        "POL-008"
+      ]
+    },
+    {
+      "kind": "exfil_mail_finance",
+      "incident": true,
+      "rule_level": 12,
+      "risk": 0.8941,
+      "severity": "critical",
+      "decision": "mask",
+      "sensitivity": "confidential",
+      "confidence": 0.75,
+      "rules": [
+        "POL-001",
+        "POL-008"
+      ]
+    },
+    {
+      "kind": "ransomware_encrypt",
+      "incident": true,
+      "rule_level": 14,
+      "risk": 0.8846,
+      "severity": "critical",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.762,
+      "rules": [
+        "POL-010"
+      ]
+    },
+    {
+      "kind": "secret_read_key",
+      "incident": true,
+      "rule_level": 12,
+      "risk": 0.9114,
+      "severity": "critical",
+      "decision": "block",
+      "sensitivity": "secret",
+      "confidence": 0.95,
+      "rules": [
+        "POL-002"
+      ]
+    },
+    {
+      "kind": "usb_copy_confidential",
+      "incident": true,
+      "rule_level": 10,
+      "risk": 0.7397,
+      "severity": "high",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.75,
+      "rules": [
+        "POL-011"
+      ]
+    },
+    {
+      "kind": "mass_copy_confidential",
+      "incident": true,
+      "rule_level": 11,
+      "risk": 0.8317,
+      "severity": "high",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.81,
+      "rules": [
+        "POL-012"
+      ]
+    },
+    {
+      "kind": "benign_read_internal",
+      "incident": false,
+      "rule_level": 4,
+      "risk": 0.3984,
+      "severity": "medium",
+      "decision": "allow",
+      "sensitivity": "internal",
+      "confidence": 0.606,
+      "rules": []
+    },
+    {
+      "kind": "benign_write_draft",
+      "incident": false,
+      "rule_level": 3,
+      "risk": 0.4184,
+      "severity": "medium",
+      "decision": "allow",
+      "sensitivity": "internal",
+      "confidence": 0.606,
+      "rules": []
+    },
+    {
+      "kind": "benign_read_public",
+      "incident": false,
+      "rule_level": 2,
+      "risk": 0.2544,
+      "severity": "low",
+      "decision": "tag",
+      "sensitivity": "public",
+      "confidence": 0.546,
+      "rules": [
+        "POL-009"
+      ]
+    },
+    {
+      "kind": "benign_upload_public",
+      "incident": false,
+      "rule_level": 10,
+      "risk": 0.4724,
+      "severity": "medium",
+      "decision": "allow",
+      "sensitivity": "public",
+      "confidence": 0.666,
+      "rules": []
+    },
+    {
+      "kind": "benign_backup_archive",
+      "incident": false,
+      "rule_level": 10,
+      "risk": 0.5922,
+      "severity": "medium",
+      "decision": "alert",
+      "sensitivity": "internal",
+      "confidence": 0.606,
+      "rules": [
+        "POL-008"
+      ]
+    },
+    {
+      "kind": "benign_usb_public",
+      "incident": false,
+      "rule_level": 10,
+      "risk": 0.3201,
+      "severity": "medium",
+      "decision": "allow",
+      "sensitivity": "public",
+      "confidence": 0.546,
+      "rules": []
+    },
+    {
+      "kind": "exfil_usb_confidential",
+      "incident": true,
+      "rule_level": 4,
+      "risk": 0.8075,
+      "severity": "high",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.81,
+      "rules": [
+        "POL-011"
+      ]
+    },
+    {
+      "kind": "exfil_webmail_confidential",
+      "incident": true,
+      "rule_level": 5,
+      "risk": 0.8962,
+      "severity": "critical",
+      "decision": "mask",
+      "sensitivity": "confidential",
+      "confidence": 0.762,
+      "rules": [
+        "POL-001",
+        "POL-008"
+      ]
+    },
+    {
+      "kind": "secret_read_kdbx",
+      "incident": true,
+      "rule_level": 6,
+      "risk": 0.9114,
+      "severity": "critical",
+      "decision": "block",
+      "sensitivity": "secret",
+      "confidence": 0.95,
+      "rules": [
+        "POL-002"
+      ]
+    },
+    {
+      "kind": "mass_copy_confidential_low",
+      "incident": true,
+      "rule_level": 7,
+      "risk": 0.8256,
+      "severity": "high",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.81,
+      "rules": [
+        "POL-012"
+      ]
+    },
+    {
+      "kind": "staging_archive_confidential",
+      "incident": true,
+      "rule_level": 7,
+      "risk": 0.8558,
+      "severity": "critical",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.81,
+      "rules": [
+        "POL-013"
+      ]
+    },
+    {
+      "kind": "exfil_upload_archive",
+      "incident": true,
+      "rule_level": 12,
+      "risk": 0.8553,
+      "severity": "critical",
+      "decision": "mask",
+      "sensitivity": "confidential",
+      "confidence": 0.858,
+      "rules": [
+        "POL-001",
+        "POL-005",
+        "POL-008"
+      ]
+    },
+    {
+      "kind": "exfil_mail_finance",
+      "incident": true,
+      "rule_level": 12,
+      "risk": 0.8553,
+      "severity": "critical",
+      "decision": "mask",
+      "sensitivity": "confidential",
+      "confidence": 0.858,
+      "rules": [
+        "POL-001",
+        "POL-005",
+        "POL-008"
+      ]
+    },
+    {
+      "kind": "ransomware_encrypt",
+      "incident": true,
+      "rule_level": 14,
+      "risk": 0.8869,
+      "severity": "critical",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.774,
+      "rules": [
+        "POL-010"
+      ]
+    },
+    {
+      "kind": "secret_read_key",
+      "incident": true,
+      "rule_level": 12,
+      "risk": 0.9114,
+      "severity": "critical",
+      "decision": "block",
+      "sensitivity": "secret",
+      "confidence": 0.95,
+      "rules": [
+        "POL-002"
+      ]
+    },
+    {
+      "kind": "usb_copy_confidential",
+      "incident": true,
+      "rule_level": 10,
+      "risk": 0.7993,
+      "severity": "high",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.762,
+      "rules": [
+        "POL-011"
+      ]
+    },
+    {
+      "kind": "mass_copy_confidential",
+      "incident": true,
+      "rule_level": 11,
+      "risk": 0.7742,
+      "severity": "high",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.81,
+      "rules": [
+        "POL-012"
+      ]
+    },
+    {
+      "kind": "benign_read_internal",
+      "incident": false,
+      "rule_level": 4,
+      "risk": 0.4074,
+      "severity": "medium",
+      "decision": "allow",
+      "sensitivity": "internal",
+      "confidence": 0.666,
+      "rules": []
+    },
+    {
+      "kind": "benign_write_draft",
+      "incident": false,
+      "rule_level": 3,
+      "risk": 0.4684,
+      "severity": "medium",
+      "decision": "allow",
+      "sensitivity": "internal",
+      "confidence": 0.606,
+      "rules": []
+    },
+    {
+      "kind": "benign_read_public",
+      "incident": false,
+      "rule_level": 2,
+      "risk": 0.3044,
+      "severity": "medium",
+      "decision": "allow",
+      "sensitivity": "public",
+      "confidence": 0.546,
+      "rules": []
+    },
+    {
+      "kind": "benign_upload_public",
+      "incident": false,
+      "rule_level": 10,
+      "risk": 0.4224,
+      "severity": "medium",
+      "decision": "allow",
+      "sensitivity": "public",
+      "confidence": 0.666,
+      "rules": []
+    },
+    {
+      "kind": "benign_backup_archive",
+      "incident": false,
+      "rule_level": 10,
+      "risk": 0.5372,
+      "severity": "medium",
+      "decision": "alert",
+      "sensitivity": "internal",
+      "confidence": 0.606,
+      "rules": [
+        "POL-008"
+      ]
+    },
+    {
+      "kind": "benign_usb_public",
+      "incident": false,
+      "rule_level": 10,
+      "risk": 0.3381,
+      "severity": "medium",
+      "decision": "allow",
+      "sensitivity": "public",
+      "confidence": 0.666,
+      "rules": []
+    },
+    {
+      "kind": "exfil_usb_confidential",
+      "incident": true,
+      "rule_level": 4,
+      "risk": 0.7438,
+      "severity": "high",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.774,
+      "rules": [
+        "POL-011"
+      ]
+    },
+    {
+      "kind": "exfil_webmail_confidential",
+      "incident": true,
+      "rule_level": 5,
+      "risk": 0.8553,
+      "severity": "critical",
+      "decision": "mask",
+      "sensitivity": "confidential",
+      "confidence": 0.858,
+      "rules": [
+        "POL-001",
+        "POL-005",
+        "POL-008"
+      ]
+    },
+    {
+      "kind": "secret_read_kdbx",
+      "incident": true,
+      "rule_level": 6,
+      "risk": 0.8996,
+      "severity": "critical",
+      "decision": "block",
+      "sensitivity": "secret",
+      "confidence": 0.882,
+      "rules": [
+        "POL-002"
+      ]
+    },
+    {
+      "kind": "mass_copy_confidential_low",
+      "incident": true,
+      "rule_level": 7,
+      "risk": 0.7681,
+      "severity": "high",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.81,
+      "rules": [
+        "POL-012"
+      ]
+    },
+    {
+      "kind": "staging_archive_confidential",
+      "incident": true,
+      "rule_level": 7,
+      "risk": 0.8444,
+      "severity": "high",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.75,
+      "rules": [
+        "POL-013"
+      ]
+    },
+    {
+      "kind": "exfil_upload_archive",
+      "incident": true,
+      "rule_level": 12,
+      "risk": 0.8387,
+      "severity": "high",
+      "decision": "mask",
+      "sensitivity": "confidential",
+      "confidence": 0.762,
+      "rules": [
+        "POL-001",
+        "POL-005",
+        "POL-008"
+      ]
+    },
+    {
+      "kind": "exfil_mail_finance",
+      "incident": true,
+      "rule_level": 12,
+      "risk": 0.8962,
+      "severity": "critical",
+      "decision": "mask",
+      "sensitivity": "confidential",
+      "confidence": 0.762,
+      "rules": [
+        "POL-001",
+        "POL-008"
+      ]
+    },
+    {
+      "kind": "ransomware_encrypt",
+      "incident": true,
+      "rule_level": 14,
+      "risk": 0.9028,
+      "severity": "critical",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.858,
+      "rules": [
+        "POL-010"
+      ]
+    },
+    {
+      "kind": "secret_read_key",
+      "incident": true,
+      "rule_level": 12,
+      "risk": 0.8539,
+      "severity": "critical",
+      "decision": "block",
+      "sensitivity": "secret",
+      "confidence": 0.95,
+      "rules": [
+        "POL-002"
+      ]
+    },
+    {
+      "kind": "usb_copy_confidential",
+      "incident": true,
+      "rule_level": 10,
+      "risk": 0.7972,
+      "severity": "high",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.75,
+      "rules": [
+        "POL-011"
+      ]
+    },
+    {
+      "kind": "mass_copy_confidential",
+      "incident": true,
+      "rule_level": 11,
+      "risk": 0.7742,
+      "severity": "high",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.81,
+      "rules": [
+        "POL-012"
+      ]
+    },
+    {
+      "kind": "benign_read_internal",
+      "incident": false,
+      "rule_level": 4,
+      "risk": 0.4484,
+      "severity": "medium",
+      "decision": "allow",
+      "sensitivity": "internal",
+      "confidence": 0.606,
+      "rules": []
+    },
+    {
+      "kind": "benign_write_draft",
+      "incident": false,
+      "rule_level": 3,
+      "risk": 0.4184,
+      "severity": "medium",
+      "decision": "allow",
+      "sensitivity": "internal",
+      "confidence": 0.606,
+      "rules": []
+    },
+    {
+      "kind": "benign_read_public",
+      "incident": false,
+      "rule_level": 2,
+      "risk": 0.3224,
+      "severity": "medium",
+      "decision": "allow",
+      "sensitivity": "public",
+      "confidence": 0.666,
+      "rules": []
+    },
+    {
+      "kind": "benign_upload_public",
+      "incident": false,
+      "rule_level": 10,
+      "risk": 0.4224,
+      "severity": "medium",
+      "decision": "allow",
+      "sensitivity": "public",
+      "confidence": 0.666,
+      "rules": []
+    },
+    {
+      "kind": "benign_backup_archive",
+      "incident": false,
+      "rule_level": 10,
+      "risk": 0.6021,
+      "severity": "high",
+      "decision": "alert",
+      "sensitivity": "internal",
+      "confidence": 0.666,
+      "rules": [
+        "POL-008"
+      ]
+    },
+    {
+      "kind": "benign_usb_public",
+      "incident": false,
+      "rule_level": 10,
+      "risk": 0.3201,
+      "severity": "medium",
+      "decision": "allow",
+      "sensitivity": "public",
+      "confidence": 0.546,
+      "rules": []
+    },
+    {
+      "kind": "exfil_usb_confidential",
+      "incident": true,
+      "rule_level": 4,
+      "risk": 0.7438,
+      "severity": "high",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.774,
+      "rules": [
+        "POL-011"
+      ]
+    },
+    {
+      "kind": "exfil_webmail_confidential",
+      "incident": true,
+      "rule_level": 5,
+      "risk": 0.8408,
+      "severity": "high",
+      "decision": "mask",
+      "sensitivity": "confidential",
+      "confidence": 0.774,
+      "rules": [
+        "POL-001",
+        "POL-005",
+        "POL-008"
+      ]
+    },
+    {
+      "kind": "secret_read_kdbx",
+      "incident": true,
+      "rule_level": 6,
+      "risk": 0.8539,
+      "severity": "critical",
+      "decision": "block",
+      "sensitivity": "secret",
+      "confidence": 0.95,
+      "rules": [
+        "POL-002"
+      ]
+    },
+    {
+      "kind": "mass_copy_confidential_low",
+      "incident": true,
+      "rule_level": 7,
+      "risk": 0.8256,
+      "severity": "high",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.81,
+      "rules": [
+        "POL-012"
+      ]
+    },
+    {
+      "kind": "staging_archive_confidential",
+      "incident": true,
+      "rule_level": 7,
+      "risk": 0.8558,
+      "severity": "critical",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.81,
+      "rules": [
+        "POL-013"
+      ]
+    },
+    {
+      "kind": "exfil_upload_archive",
+      "incident": true,
+      "rule_level": 12,
+      "risk": 0.847,
+      "severity": "high",
+      "decision": "mask",
+      "sensitivity": "confidential",
+      "confidence": 0.81,
+      "rules": [
+        "POL-001",
+        "POL-005",
+        "POL-008"
+      ]
+    },
+    {
+      "kind": "exfil_mail_finance",
+      "incident": true,
+      "rule_level": 12,
+      "risk": 0.8408,
+      "severity": "high",
+      "decision": "mask",
+      "sensitivity": "confidential",
+      "confidence": 0.774,
+      "rules": [
+        "POL-001",
+        "POL-005",
+        "POL-008"
+      ]
+    },
+    {
+      "kind": "ransomware_encrypt",
+      "incident": true,
+      "rule_level": 14,
+      "risk": 0.8937,
+      "severity": "critical",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.81,
+      "rules": [
+        "POL-010"
+      ]
+    },
+    {
+      "kind": "secret_read_key",
+      "incident": true,
+      "rule_level": 12,
+      "risk": 0.9114,
+      "severity": "critical",
+      "decision": "block",
+      "sensitivity": "secret",
+      "confidence": 0.95,
+      "rules": [
+        "POL-002"
+      ]
+    },
+    {
+      "kind": "usb_copy_confidential",
+      "incident": true,
+      "rule_level": 10,
+      "risk": 0.75,
+      "severity": "high",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.81,
+      "rules": [
+        "POL-011"
+      ]
+    },
+    {
+      "kind": "mass_copy_confidential",
+      "incident": true,
+      "rule_level": 11,
+      "risk": 0.7742,
+      "severity": "high",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.81,
+      "rules": [
+        "POL-012"
+      ]
+    },
+    {
+      "kind": "benign_read_internal",
+      "incident": false,
+      "rule_level": 4,
+      "risk": 0.3984,
+      "severity": "medium",
+      "decision": "allow",
+      "sensitivity": "internal",
+      "confidence": 0.606,
+      "rules": []
+    },
+    {
+      "kind": "benign_write_draft",
+      "incident": false,
+      "rule_level": 3,
+      "risk": 0.4774,
+      "severity": "medium",
+      "decision": "allow",
+      "sensitivity": "internal",
+      "confidence": 0.666,
+      "rules": []
+    },
+    {
+      "kind": "benign_read_public",
+      "incident": false,
+      "rule_level": 2,
+      "risk": 0.2544,
+      "severity": "low",
+      "decision": "tag",
+      "sensitivity": "public",
+      "confidence": 0.546,
+      "rules": [
+        "POL-009"
+      ]
+    },
+    {
+      "kind": "benign_upload_public",
+      "incident": false,
+      "rule_level": 10,
+      "risk": 0.4224,
+      "severity": "medium",
+      "decision": "allow",
+      "sensitivity": "public",
+      "confidence": 0.666,
+      "rules": []
+    },
+    {
+      "kind": "benign_backup_archive",
+      "incident": false,
+      "rule_level": 10,
+      "risk": 0.5372,
+      "severity": "medium",
+      "decision": "alert",
+      "sensitivity": "internal",
+      "confidence": 0.606,
+      "rules": [
+        "POL-008"
+      ]
+    },
+    {
+      "kind": "benign_usb_public",
+      "incident": false,
+      "rule_level": 10,
+      "risk": 0.3381,
+      "severity": "medium",
+      "decision": "allow",
+      "sensitivity": "public",
+      "confidence": 0.666,
+      "rules": []
+    },
+    {
+      "kind": "exfil_usb_confidential",
+      "incident": true,
+      "rule_level": 4,
+      "risk": 0.7397,
+      "severity": "high",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.75,
+      "rules": [
+        "POL-011"
+      ]
+    },
+    {
+      "kind": "exfil_webmail_confidential",
+      "incident": true,
+      "rule_level": 5,
+      "risk": 0.8408,
+      "severity": "high",
+      "decision": "mask",
+      "sensitivity": "confidential",
+      "confidence": 0.774,
+      "rules": [
+        "POL-001",
+        "POL-005",
+        "POL-008"
+      ]
+    },
+    {
+      "kind": "secret_read_kdbx",
+      "incident": true,
+      "rule_level": 6,
+      "risk": 0.8421,
+      "severity": "high",
+      "decision": "block",
+      "sensitivity": "secret",
+      "confidence": 0.882,
+      "rules": [
+        "POL-002"
+      ]
+    },
+    {
+      "kind": "mass_copy_confidential_low",
+      "incident": true,
+      "rule_level": 7,
+      "risk": 0.7681,
+      "severity": "high",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.81,
+      "rules": [
+        "POL-012"
+      ]
+    },
+    {
+      "kind": "staging_archive_confidential",
+      "incident": true,
+      "rule_level": 7,
+      "risk": 0.8444,
+      "severity": "high",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.75,
+      "rules": [
+        "POL-013"
+      ]
+    },
+    {
+      "kind": "exfil_upload_archive",
+      "incident": true,
+      "rule_level": 12,
+      "risk": 0.8941,
+      "severity": "critical",
+      "decision": "mask",
+      "sensitivity": "confidential",
+      "confidence": 0.75,
+      "rules": [
+        "POL-001",
+        "POL-008"
+      ]
+    },
+    {
+      "kind": "exfil_mail_finance",
+      "incident": true,
+      "rule_level": 12,
+      "risk": 0.8387,
+      "severity": "high",
+      "decision": "mask",
+      "sensitivity": "confidential",
+      "confidence": 0.762,
+      "rules": [
+        "POL-001",
+        "POL-005",
+        "POL-008"
+      ]
+    },
+    {
+      "kind": "ransomware_encrypt",
+      "incident": true,
+      "rule_level": 14,
+      "risk": 0.9661,
+      "severity": "critical",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.858,
+      "rules": [
+        "POL-010"
+      ]
+    },
+    {
+      "kind": "secret_read_key",
+      "incident": true,
+      "rule_level": 12,
+      "risk": 0.8421,
+      "severity": "high",
+      "decision": "block",
+      "sensitivity": "secret",
+      "confidence": 0.882,
+      "rules": [
+        "POL-002"
+      ]
+    },
+    {
+      "kind": "usb_copy_confidential",
+      "incident": true,
+      "rule_level": 10,
+      "risk": 0.8158,
+      "severity": "high",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.858,
+      "rules": [
+        "POL-011"
+      ]
+    },
+    {
+      "kind": "mass_copy_confidential",
+      "incident": true,
+      "rule_level": 11,
+      "risk": 0.7742,
+      "severity": "high",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.81,
+      "rules": [
+        "POL-012"
+      ]
+    },
+    {
+      "kind": "benign_read_internal",
+      "incident": false,
+      "rule_level": 4,
+      "risk": 0.4074,
+      "severity": "medium",
+      "decision": "allow",
+      "sensitivity": "internal",
+      "confidence": 0.666,
+      "rules": []
+    },
+    {
+      "kind": "benign_write_draft",
+      "incident": false,
+      "rule_level": 3,
+      "risk": 0.4184,
+      "severity": "medium",
+      "decision": "allow",
+      "sensitivity": "internal",
+      "confidence": 0.606,
+      "rules": []
+    },
+    {
+      "kind": "benign_read_public",
+      "incident": false,
+      "rule_level": 2,
+      "risk": 0.3044,
+      "severity": "medium",
+      "decision": "allow",
+      "sensitivity": "public",
+      "confidence": 0.546,
+      "rules": []
+    },
+    {
+      "kind": "benign_upload_public",
+      "incident": false,
+      "rule_level": 10,
+      "risk": 0.4544,
+      "severity": "medium",
+      "decision": "allow",
+      "sensitivity": "public",
+      "confidence": 0.546,
+      "rules": []
+    },
+    {
+      "kind": "benign_backup_archive",
+      "incident": false,
+      "rule_level": 10,
+      "risk": 0.5372,
+      "severity": "medium",
+      "decision": "alert",
+      "sensitivity": "internal",
+      "confidence": 0.606,
+      "rules": [
+        "POL-008"
+      ]
+    },
+    {
+      "kind": "benign_usb_public",
+      "incident": false,
+      "rule_level": 10,
+      "risk": 0.3881,
+      "severity": "medium",
+      "decision": "allow",
+      "sensitivity": "public",
+      "confidence": 0.666,
+      "rules": []
+    },
+    {
+      "kind": "exfil_usb_confidential",
+      "incident": true,
+      "rule_level": 4,
+      "risk": 0.7397,
+      "severity": "high",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.75,
+      "rules": [
+        "POL-011"
+      ]
+    },
+    {
+      "kind": "exfil_webmail_confidential",
+      "incident": true,
+      "rule_level": 5,
+      "risk": 0.8366,
+      "severity": "high",
+      "decision": "mask",
+      "sensitivity": "confidential",
+      "confidence": 0.75,
+      "rules": [
+        "POL-001",
+        "POL-008"
+      ]
+    },
+    {
+      "kind": "secret_read_kdbx",
+      "incident": true,
+      "rule_level": 6,
+      "risk": 0.9114,
+      "severity": "critical",
+      "decision": "block",
+      "sensitivity": "secret",
+      "confidence": 0.95,
+      "rules": [
+        "POL-002"
+      ]
+    },
+    {
+      "kind": "mass_copy_confidential_low",
+      "incident": true,
+      "rule_level": 7,
+      "risk": 0.7681,
+      "severity": "high",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.81,
+      "rules": [
+        "POL-012"
+      ]
+    },
+    {
+      "kind": "staging_archive_confidential",
+      "incident": true,
+      "rule_level": 7,
+      "risk": 0.8649,
+      "severity": "critical",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.858,
+      "rules": [
+        "POL-013"
+      ]
+    },
+    {
+      "kind": "exfil_upload_archive",
+      "incident": true,
+      "rule_level": 12,
+      "risk": 0.847,
+      "severity": "high",
+      "decision": "mask",
+      "sensitivity": "confidential",
+      "confidence": 0.81,
+      "rules": [
+        "POL-001",
+        "POL-005",
+        "POL-008"
+      ]
+    },
+    {
+      "kind": "exfil_mail_finance",
+      "incident": true,
+      "rule_level": 12,
+      "risk": 0.8408,
+      "severity": "high",
+      "decision": "mask",
+      "sensitivity": "confidential",
+      "confidence": 0.774,
+      "rules": [
+        "POL-001",
+        "POL-005",
+        "POL-008"
+      ]
+    },
+    {
+      "kind": "ransomware_encrypt",
+      "incident": true,
+      "rule_level": 14,
+      "risk": 0.9028,
+      "severity": "critical",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.858,
+      "rules": [
+        "POL-010"
+      ]
+    },
+    {
+      "kind": "secret_read_key",
+      "incident": true,
+      "rule_level": 12,
+      "risk": 0.8996,
+      "severity": "critical",
+      "decision": "block",
+      "sensitivity": "secret",
+      "confidence": 0.882,
+      "rules": [
+        "POL-002"
+      ]
+    },
+    {
+      "kind": "usb_copy_confidential",
+      "incident": true,
+      "rule_level": 10,
+      "risk": 0.7438,
+      "severity": "high",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.774,
+      "rules": [
+        "POL-011"
+      ]
+    },
+    {
+      "kind": "mass_copy_confidential",
+      "incident": true,
+      "rule_level": 11,
+      "risk": 0.7742,
+      "severity": "high",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.81,
+      "rules": [
+        "POL-012"
+      ]
+    },
+    {
+      "kind": "benign_read_internal",
+      "incident": false,
+      "rule_level": 4,
+      "risk": 0.3984,
+      "severity": "medium",
+      "decision": "allow",
+      "sensitivity": "internal",
+      "confidence": 0.606,
+      "rules": []
+    },
+    {
+      "kind": "benign_write_draft",
+      "incident": false,
+      "rule_level": 3,
+      "risk": 0.4184,
+      "severity": "medium",
+      "decision": "allow",
+      "sensitivity": "internal",
+      "confidence": 0.606,
+      "rules": []
+    },
+    {
+      "kind": "benign_read_public",
+      "incident": false,
+      "rule_level": 2,
+      "risk": 0.3224,
+      "severity": "medium",
+      "decision": "allow",
+      "sensitivity": "public",
+      "confidence": 0.666,
+      "rules": []
+    },
+    {
+      "kind": "benign_upload_public",
+      "incident": false,
+      "rule_level": 10,
+      "risk": 0.4044,
+      "severity": "medium",
+      "decision": "allow",
+      "sensitivity": "public",
+      "confidence": 0.546,
+      "rules": []
+    },
+    {
+      "kind": "benign_backup_archive",
+      "incident": false,
+      "rule_level": 10,
+      "risk": 0.5471,
+      "severity": "medium",
+      "decision": "alert",
+      "sensitivity": "internal",
+      "confidence": 0.666,
+      "rules": [
+        "POL-008"
+      ]
+    },
+    {
+      "kind": "benign_usb_public",
+      "incident": false,
+      "rule_level": 10,
+      "risk": 0.3201,
+      "severity": "medium",
+      "decision": "allow",
+      "sensitivity": "public",
+      "confidence": 0.546,
+      "rules": []
+    },
+    {
+      "kind": "exfil_usb_confidential",
+      "incident": true,
+      "rule_level": 4,
+      "risk": 0.7438,
+      "severity": "high",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.774,
+      "rules": [
+        "POL-011"
+      ]
+    },
+    {
+      "kind": "exfil_webmail_confidential",
+      "incident": true,
+      "rule_level": 5,
+      "risk": 0.8553,
+      "severity": "critical",
+      "decision": "mask",
+      "sensitivity": "confidential",
+      "confidence": 0.858,
+      "rules": [
+        "POL-001",
+        "POL-005",
+        "POL-008"
+      ]
+    },
+    {
+      "kind": "secret_read_kdbx",
+      "incident": true,
+      "rule_level": 6,
+      "risk": 0.8539,
+      "severity": "critical",
+      "decision": "block",
+      "sensitivity": "secret",
+      "confidence": 0.95,
+      "rules": [
+        "POL-002"
+      ]
+    },
+    {
+      "kind": "mass_copy_confidential_low",
+      "incident": true,
+      "rule_level": 7,
+      "risk": 0.7681,
+      "severity": "high",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.81,
+      "rules": [
+        "POL-012"
+      ]
+    },
+    {
+      "kind": "staging_archive_confidential",
+      "incident": true,
+      "rule_level": 7,
+      "risk": 0.9076,
+      "severity": "critical",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.75,
+      "rules": [
+        "POL-013"
+      ]
+    },
+    {
+      "kind": "exfil_upload_archive",
+      "incident": true,
+      "rule_level": 12,
+      "risk": 0.8553,
+      "severity": "critical",
+      "decision": "mask",
+      "sensitivity": "confidential",
+      "confidence": 0.858,
+      "rules": [
+        "POL-001",
+        "POL-005",
+        "POL-008"
+      ]
+    },
+    {
+      "kind": "exfil_mail_finance",
+      "incident": true,
+      "rule_level": 12,
+      "risk": 0.8553,
+      "severity": "critical",
+      "decision": "mask",
+      "sensitivity": "confidential",
+      "confidence": 0.858,
+      "rules": [
+        "POL-001",
+        "POL-005",
+        "POL-008"
+      ]
+    },
+    {
+      "kind": "ransomware_encrypt",
+      "incident": true,
+      "rule_level": 14,
+      "risk": 0.957,
+      "severity": "critical",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.81,
+      "rules": [
+        "POL-010"
+      ]
+    },
+    {
+      "kind": "secret_read_key",
+      "incident": true,
+      "rule_level": 12,
+      "risk": 0.8539,
+      "severity": "critical",
+      "decision": "block",
+      "sensitivity": "secret",
+      "confidence": 0.95,
+      "rules": [
+        "POL-002"
+      ]
+    },
+    {
+      "kind": "usb_copy_confidential",
+      "incident": true,
+      "rule_level": 10,
+      "risk": 0.7397,
+      "severity": "high",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.75,
+      "rules": [
+        "POL-011"
+      ]
+    },
+    {
+      "kind": "mass_copy_confidential",
+      "incident": true,
+      "rule_level": 11,
+      "risk": 0.8317,
+      "severity": "high",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.81,
+      "rules": [
+        "POL-012"
+      ]
+    },
+    {
+      "kind": "benign_read_internal",
+      "incident": false,
+      "rule_level": 4,
+      "risk": 0.4574,
+      "severity": "medium",
+      "decision": "allow",
+      "sensitivity": "internal",
+      "confidence": 0.666,
+      "rules": []
+    },
+    {
+      "kind": "benign_write_draft",
+      "incident": false,
+      "rule_level": 3,
+      "risk": 0.4184,
+      "severity": "medium",
+      "decision": "allow",
+      "sensitivity": "internal",
+      "confidence": 0.606,
+      "rules": []
+    },
+    {
+      "kind": "benign_read_public",
+      "incident": false,
+      "rule_level": 2,
+      "risk": 0.2724,
+      "severity": "low",
+      "decision": "tag",
+      "sensitivity": "public",
+      "confidence": 0.666,
+      "rules": [
+        "POL-009"
+      ]
+    },
+    {
+      "kind": "benign_upload_public",
+      "incident": false,
+      "rule_level": 10,
+      "risk": 0.4544,
+      "severity": "medium",
+      "decision": "allow",
+      "sensitivity": "public",
+      "confidence": 0.546,
+      "rules": []
+    },
+    {
+      "kind": "benign_backup_archive",
+      "incident": false,
+      "rule_level": 10,
+      "risk": 0.5372,
+      "severity": "medium",
+      "decision": "alert",
+      "sensitivity": "internal",
+      "confidence": 0.606,
+      "rules": [
+        "POL-008"
+      ]
+    },
+    {
+      "kind": "benign_usb_public",
+      "incident": false,
+      "rule_level": 10,
+      "risk": 0.3201,
+      "severity": "medium",
+      "decision": "allow",
+      "sensitivity": "public",
+      "confidence": 0.546,
+      "rules": []
+    },
+    {
+      "kind": "exfil_usb_confidential",
+      "incident": true,
+      "rule_level": 4,
+      "risk": 0.7418,
+      "severity": "high",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.762,
+      "rules": [
+        "POL-011"
+      ]
+    },
+    {
+      "kind": "exfil_webmail_confidential",
+      "incident": true,
+      "rule_level": 5,
+      "risk": 0.9128,
+      "severity": "critical",
+      "decision": "mask",
+      "sensitivity": "confidential",
+      "confidence": 0.858,
+      "rules": [
+        "POL-001",
+        "POL-008"
+      ]
+    },
+    {
+      "kind": "secret_read_kdbx",
+      "incident": true,
+      "rule_level": 6,
+      "risk": 0.8539,
+      "severity": "critical",
+      "decision": "block",
+      "sensitivity": "secret",
+      "confidence": 0.95,
+      "rules": [
+        "POL-002"
+      ]
+    },
+    {
+      "kind": "mass_copy_confidential_low",
+      "incident": true,
+      "rule_level": 7,
+      "risk": 0.8256,
+      "severity": "high",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.81,
+      "rules": [
+        "POL-012"
+      ]
+    },
+    {
+      "kind": "staging_archive_confidential",
+      "incident": true,
+      "rule_level": 7,
+      "risk": 0.8489,
+      "severity": "high",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.774,
+      "rules": [
+        "POL-013"
+      ]
+    },
+    {
+      "kind": "exfil_upload_archive",
+      "incident": true,
+      "rule_level": 12,
+      "risk": 0.8387,
+      "severity": "high",
+      "decision": "mask",
+      "sensitivity": "confidential",
+      "confidence": 0.762,
+      "rules": [
+        "POL-001",
+        "POL-005",
+        "POL-008"
+      ]
+    },
+    {
+      "kind": "exfil_mail_finance",
+      "incident": true,
+      "rule_level": 12,
+      "risk": 0.8408,
+      "severity": "high",
+      "decision": "mask",
+      "sensitivity": "confidential",
+      "confidence": 0.774,
+      "rules": [
+        "POL-001",
+        "POL-005",
+        "POL-008"
+      ]
+    },
+    {
+      "kind": "ransomware_encrypt",
+      "incident": true,
+      "rule_level": 14,
+      "risk": 0.9661,
+      "severity": "critical",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.858,
+      "rules": [
+        "POL-010"
+      ]
+    },
+    {
+      "kind": "secret_read_key",
+      "incident": true,
+      "rule_level": 12,
+      "risk": 0.8539,
+      "severity": "critical",
+      "decision": "block",
+      "sensitivity": "secret",
+      "confidence": 0.95,
+      "rules": [
+        "POL-002"
+      ]
+    },
+    {
+      "kind": "usb_copy_confidential",
+      "incident": true,
+      "rule_level": 10,
+      "risk": 0.7418,
+      "severity": "high",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.762,
+      "rules": [
+        "POL-011"
+      ]
+    },
+    {
+      "kind": "mass_copy_confidential",
+      "incident": true,
+      "rule_level": 11,
+      "risk": 0.7742,
+      "severity": "high",
+      "decision": "block",
+      "sensitivity": "confidential",
+      "confidence": 0.81,
+      "rules": [
+        "POL-012"
+      ]
+    }
+  ]
+}

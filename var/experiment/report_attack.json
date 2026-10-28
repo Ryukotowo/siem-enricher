@@ -1,0 +1,185 @@
+{
+  "total": 136,
+  "incidents": 88,
+  "variants": {
+    "исходный": {
+      "модель": {
+        "stats": {
+          "tp": 73,
+          "fp": 37,
+          "fn": 15,
+          "tn": 11
+        },
+        "recall": 0.8295,
+        "precision": 0.6636,
+        "fpr": 0.7708,
+        "specificity": 0.2292,
+        "f1": 0.7374,
+        "accuracy": 0.6176,
+        "alerts": 110
+      },
+      "правила": {
+        "stats": {
+          "tp": 88,
+          "fp": 8,
+          "fn": 0,
+          "tn": 40
+        },
+        "recall": 1.0,
+        "precision": 0.9167,
+        "fpr": 0.1667,
+        "specificity": 0.8333,
+        "f1": 0.9565,
+        "accuracy": 0.9412,
+        "alerts": 96
+      },
+      "гибрид": {
+        "stats": {
+          "tp": 88,
+          "fp": 2,
+          "fn": 0,
+          "tn": 46
+        },
+        "recall": 1.0,
+        "precision": 0.9778,
+        "fpr": 0.0417,
+        "specificity": 0.9583,
+        "f1": 0.9888,
+        "accuracy": 0.9853,
+        "alerts": 90
+      }
+    },
+    "переименование": {
+      "модель": {
+        "stats": {
+          "tp": 33,
+          "fp": 18,
+          "fn": 55,
+          "tn": 30
+        },
+        "recall": 0.375,
+        "precision": 0.6471,
+        "fpr": 0.375,
+        "specificity": 0.625,
+        "f1": 0.4748,
+        "accuracy": 0.4632,
+        "alerts": 51
+      },
+      "правила": {
+        "stats": {
+          "tp": 88,
+          "fp": 8,
+          "fn": 0,
+          "tn": 40
+        },
+        "recall": 1.0,
+        "precision": 0.9167,
+        "fpr": 0.1667,
+        "specificity": 0.8333,
+        "f1": 0.9565,
+        "accuracy": 0.9412,
+        "alerts": 96
+      },
+      "гибрид": {
+        "stats": {
+          "tp": 88,
+          "fp": 8,
+          "fn": 0,
+          "tn": 40
+        },
+        "recall": 1.0,
+        "precision": 0.9167,
+        "fpr": 0.1667,
+        "specificity": 0.8333,
+        "f1": 0.9565,
+        "accuracy": 0.9412,
+        "alerts": 96
+      }
+    },
+    "переименование и перенос": {
+      "модель": {
+        "stats": {
+          "tp": 33,
+          "fp": 18,
+          "fn": 55,
+          "tn": 30
+        },
+        "recall": 0.375,
+        "precision": 0.6471,
+        "fpr": 0.375,
+        "specificity": 0.625,
+        "f1": 0.4748,
+        "accuracy": 0.4632,
+        "alerts": 51
+      },
+      "правила": {
+        "stats": {
+          "tp": 84,
+          "fp": 16,
+          "fn": 4,
+          "tn": 32
+        },
+        "recall": 0.9545,
+        "precision": 0.84,
+        "fpr": 0.3333,
+        "specificity": 0.6667,
+        "f1": 0.8936,
+        "accuracy": 0.8529,
+        "alerts": 100
+      },
+      "гибрид": {
+        "stats": {
+          "tp": 84,
+          "fp": 16,
+          "fn": 4,
+          "tn": 32
+        },
+        "recall": 0.9545,
+        "precision": 0.84,
+        "fpr": 0.3333,
+        "specificity": 0.6667,
+        "f1": 0.8936,
+        "accuracy": 0.8529,
+        "alerts": 100
+      }
+    }
+  },
+  "mcnemar": {
+    "модель vs гибрид": {
+      "b": 52,
+      "c": 2,
+      "chi2": 44.463,
+      "p": 0.0
+    },
+    "правила vs гибрид": {
+      "b": 6,
+      "c": 0,
+      "chi2": 4.167,
+      "p": 0.04123
+    }
+  },
+  "bootstrap_hybrid_minus_rules": {
+    "precision": [
+      0.02,
+      0.1109
+    ],
+    "recall": [
+      0.0,
+      0.0
+    ],
+    "fpr": [
+      -0.2273,
+      -0.0408
+    ]
+  },
+  "bootstrap_hybrid_minus_model": {
+    "precision": [
+      0.2278,
+      0.4077
+    ],
+    "recall": [
+      0.0964,
+      0.25
+    ]
+  }
+}

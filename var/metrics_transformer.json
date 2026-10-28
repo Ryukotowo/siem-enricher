@@ -1,0 +1,106 @@
+{
+  "evaluated_at": "2026-10-16T13:35:06.425757+00:00",
+  "model": "C:\\Users\\idv1102\\Documents\\deepseek-harness\\default-workspace\\siem-enricher\\ml\\artifacts\\sensitivity_transformer",
+  "dataset": "C:\\Users\\idv1102\\Documents\\deepseek-harness\\default-workspace\\siem-enricher\\ml\\data\\processed\\files.csv",
+  "mode": "transformer",
+  "samples": 2029,
+  "by_source": {
+    "csv": {
+      "samples": 1599,
+      "category_accuracy": 0.9518,
+      "category_f1_macro": 0.9487,
+      "sensitivity_accuracy": 0.9762,
+      "sensitivity_f1_macro": 0.9701
+    },
+    "generator": {
+      "samples": 430,
+      "category_accuracy": 0.0674,
+      "category_f1_macro": 0.0329,
+      "sensitivity_accuracy": 0.4628,
+      "sensitivity_f1_macro": 0.2461
+    }
+  },
+  "category_metrics": {
+    "accuracy": 0.7644159684573681,
+    "f1_macro": 0.7801465952472618,
+    "f1_weighted": 0.7555074989278947,
+    "report": "                   precision    recall  f1-score   support\n\n          banking       0.74      0.91      0.81       199\n       commercial       0.81      0.50      0.62       530\n               ip       0.87      0.93      0.90       200\nofficial_internal       0.81      0.75      0.78       310\n         personal       0.68      0.89      0.77       330\n           public       0.75      0.85      0.80       460\n\n         accuracy                           0.76      2029\n        macro avg       0.78      0.81      0.78      2029\n     weighted avg       0.77      0.76      0.76      2029\n"
+  },
+  "sensitivity_metrics": {
+    "accuracy": 0.8674223755544603,
+    "f1_macro": 0.831783400365436,
+    "report": "              precision    recall  f1-score   support\n\nconfidential       0.93      0.90      0.92      1259\n    internal       0.81      0.75      0.78       310\n      public       0.75      0.85      0.80       460\n\n    accuracy                           0.87      2029\n   macro avg       0.83      0.84      0.83      2029\nweighted avg       0.87      0.87      0.87      2029\n"
+  },
+  "errors": [
+    {
+      "target": "C:\\Бухгалтерия\\dokument_s_gryphom_tayna.pdf",
+      "expected": "banking",
+      "predicted": "commercial",
+      "confidence": "0.496",
+      "reason": "модель BertForSequenceClassification: категория «commercial» → класс «confidential»"
+    },
+    {
+      "target": "C:\\Бухгалтерия\\finance_report_conf.xlsx",
+      "expected": "banking",
+      "predicted": "commercial",
+      "confidence": "0.868",
+      "reason": "модель BertForSequenceClassification: категория «commercial» → класс «confidential»"
+    },
+    {
+      "target": "C:\\Бухгалтерия\\finansovaya_otchetnost_2023.pdf",
+      "expected": "banking",
+      "predicted": "public",
+      "confidence": "0.447",
+      "reason": "модель BertForSequenceClassification: категория «public» → класс «public»"
+    },
+    {
+      "target": "C:\\Бухгалтерия\\operational_secret.txt",
+      "expected": "banking",
+      "predicted": "commercial",
+      "confidence": "0.909",
+      "reason": "модель BertForSequenceClassification: категория «commercial» → класс «confidential»"
+    },
+    {
+      "target": "C:\\Бухгалтерия\\scheta_zakrytye_spisok.pdf",
+      "expected": "banking",
+      "predicted": "public",
+      "confidence": "0.565",
+      "reason": "модель BertForSequenceClassification: категория «public» → класс «public»"
+    },
+    {
+      "target": "C:\\Бухгалтерия\\secret_client_list.xlsx",
+      "expected": "banking",
+      "predicted": "commercial",
+      "confidence": "0.817",
+      "reason": "модель BertForSequenceClassification: категория «commercial» → класс «confidential»"
+    },
+    {
+      "target": "C:\\Бухгалтерия\\tayna_scheta_po_vsem_operaciyam.xlsx",
+      "expected": "banking",
+      "predicted": "commercial",
+      "confidence": "0.715",
+      "reason": "модель BertForSequenceClassification: категория «commercial» → класс «confidential»"
+    },
+    {
+      "target": "C:\\Бухгалтерия\\бланк_строгой_отчетности.pdf",
+      "expected": "banking",
+      "predicted": "commercial",
+      "confidence": "0.494",
+      "reason": "модель BertForSequenceClassification: категория «commercial» → класс «confidential»"
+    },
+    {
+      "target": "C:\\Бухгалтерия\\внутренний_меморандум.docx",
+      "expected": "banking",
+      "predicted": "commercial",
+      "confidence": "0.836",
+      "reason": "модель BertForSequenceClassification: категория «commercial» → класс «confidential»"
+    },
+    {
+      "target": "C:\\Бухгалтерия\\внутренняя_аналитика_финмониторинга.xlsx",
+      "expected": "banking",
+      "predicted": "commercial",
+      "confidence": "0.721",
+      "reason": "модель BertForSequenceClassification: категория «commercial» → класс «confidential»"
+    }
+  ]
+}

@@ -1,0 +1,659 @@
+{
+  "engine": "OpenSearch",
+  "indexed": 136,
+  "incidents": 88,
+  "benign": 48,
+  "rules": [
+    {
+      "title": "Ключевое слово в имени файла при действии с данными",
+      "file": "r1_keyword_in_filename.yml",
+      "critical": false,
+      "hits": 56,
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "bool": {
+                "must": [
+                  {
+                    "bool": {
+                      "should": [
+                        {
+                          "wildcard": {
+                            "file.name": {
+                              "value": "*зарплат*",
+                              "case_insensitive": true
+                            }
+                          }
+                        },
+                        {
+                          "wildcard": {
+                            "file.name": {
+                              "value": "*ведомост*",
+                              "case_insensitive": true
+                            }
+                          }
+                        },
+                        {
+                          "wildcard": {
+                            "file.name": {
+                              "value": "*паспорт*",
+                              "case_insensitive": true
+                            }
+                          }
+                        },
+                        {
+                          "wildcard": {
+                            "file.name": {
+                              "value": "*снилс*",
+                              "case_insensitive": true
+                            }
+                          }
+                        },
+                        {
+                          "wildcard": {
+                            "file.name": {
+                              "value": "*анкет*",
+                              "case_insensitive": true
+                            }
+                          }
+                        },
+                        {
+                          "wildcard": {
+                            "file.name": {
+                              "value": "*договор*",
+                              "case_insensitive": true
+                            }
+                          }
+                        },
+                        {
+                          "wildcard": {
+                            "file.name": {
+                              "value": "*клиент*",
+                              "case_insensitive": true
+                            }
+                          }
+                        },
+                        {
+                          "wildcard": {
+                            "file.name": {
+                              "value": "*счет*",
+                              "case_insensitive": true
+                            }
+                          }
+                        },
+                        {
+                          "wildcard": {
+                            "file.name": {
+                              "value": "*счёт*",
+                              "case_insensitive": true
+                            }
+                          }
+                        },
+                        {
+                          "wildcard": {
+                            "file.name": {
+                              "value": "*отчет*",
+                              "case_insensitive": true
+                            }
+                          }
+                        },
+                        {
+                          "wildcard": {
+                            "file.name": {
+                              "value": "*отчёт*",
+                              "case_insensitive": true
+                            }
+                          }
+                        },
+                        {
+                          "wildcard": {
+                            "file.name": {
+                              "value": "*финанс*",
+                              "case_insensitive": true
+                            }
+                          }
+                        },
+                        {
+                          "wildcard": {
+                            "file.name": {
+                              "value": "*диагноз*",
+                              "case_insensitive": true
+                            }
+                          }
+                        },
+                        {
+                          "wildcard": {
+                            "file.name": {
+                              "value": "*медиц*",
+                              "case_insensitive": true
+                            }
+                          }
+                        },
+                        {
+                          "wildcard": {
+                            "file.name": {
+                              "value": "*приказ*",
+                              "case_insensitive": true
+                            }
+                          }
+                        },
+                        {
+                          "wildcard": {
+                            "file.name": {
+                              "value": "*payroll*",
+                              "case_insensitive": true
+                            }
+                          }
+                        },
+                        {
+                          "wildcard": {
+                            "file.name": {
+                              "value": "*salary*",
+                              "case_insensitive": true
+                            }
+                          }
+                        },
+                        {
+                          "wildcard": {
+                            "file.name": {
+                              "value": "*invoice*",
+                              "case_insensitive": true
+                            }
+                          }
+                        },
+                        {
+                          "wildcard": {
+                            "file.name": {
+                              "value": "*contract*",
+                              "case_insensitive": true
+                            }
+                          }
+                        },
+                        {
+                          "wildcard": {
+                            "file.name": {
+                              "value": "*customer*",
+                              "case_insensitive": true
+                            }
+                          }
+                        }
+                      ],
+                      "minimum_should_match": 1
+                    }
+                  },
+                  {
+                    "terms": {
+                      "event.action": [
+                        "upload",
+                        "send",
+                        "copy",
+                        "move"
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "title": "Файл с защищённым расширением",
+      "file": "r2_secret_extension.yml",
+      "critical": true,
+      "hits": 12,
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "bool": {
+                "must": [
+                  {
+                    "bool": {
+                      "should": [
+                        {
+                          "wildcard": {
+                            "file.name": {
+                              "value": "*.kdbx",
+                              "case_insensitive": true
+                            }
+                          }
+                        },
+                        {
+                          "wildcard": {
+                            "file.name": {
+                              "value": "*.pem",
+                              "case_insensitive": true
+                            }
+                          }
+                        },
+                        {
+                          "wildcard": {
+                            "file.name": {
+                              "value": "*.key",
+                              "case_insensitive": true
+                            }
+                          }
+                        },
+                        {
+                          "wildcard": {
+                            "file.name": {
+                              "value": "*.env",
+                              "case_insensitive": true
+                            }
+                          }
+                        }
+                      ],
+                      "minimum_should_match": 1
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "title": "Обращение к файлу в защищённом каталоге",
+      "file": "r3_protected_directory.yml",
+      "critical": false,
+      "hits": 64,
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "bool": {
+                "must": [
+                  {
+                    "bool": {
+                      "should": [
+                        {
+                          "wildcard": {
+                            "file.path": {
+                              "value": "*\\\\hr\\\\*",
+                              "case_insensitive": true
+                            }
+                          }
+                        },
+                        {
+                          "wildcard": {
+                            "file.path": {
+                              "value": "*\\\\бухгалтер*",
+                              "case_insensitive": true
+                            }
+                          }
+                        },
+                        {
+                          "wildcard": {
+                            "file.path": {
+                              "value": "*\\\\юридическ*",
+                              "case_insensitive": true
+                            }
+                          }
+                        },
+                        {
+                          "wildcard": {
+                            "file.path": {
+                              "value": "*\\\\клиент*",
+                              "case_insensitive": true
+                            }
+                          }
+                        },
+                        {
+                          "wildcard": {
+                            "file.path": {
+                              "value": "*\\\\медицин*",
+                              "case_insensitive": true
+                            }
+                          }
+                        },
+                        {
+                          "wildcard": {
+                            "file.path": {
+                              "value": "*\\\\finance*",
+                              "case_insensitive": true
+                            }
+                          }
+                        },
+                        {
+                          "wildcard": {
+                            "file.path": {
+                              "value": "*\\\\legal*",
+                              "case_insensitive": true
+                            }
+                          }
+                        }
+                      ],
+                      "minimum_should_match": 1
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "bool": {
+                "must": [
+                  {
+                    "terms": {
+                      "event.action": [
+                        "upload",
+                        "send",
+                        "copy",
+                        "move",
+                        "archive",
+                        "read"
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "title": "Отправка файла во внешний адрес",
+      "file": "r4_external_destination.yml",
+      "critical": true,
+      "hits": 32,
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "bool": {
+                "must": [
+                  {
+                    "terms": {
+                      "event.action": [
+                        "upload",
+                        "send"
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "bool": {
+                "must": [
+                  {
+                    "exists": {
+                      "field": "destination.ip"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "title": "Шифрование файлов",
+      "file": "r5_encryption.yml",
+      "critical": true,
+      "hits": 8,
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "bool": {
+                "must": [
+                  {
+                    "term": {
+                      "event.action": "encrypt"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "title": "Архивирование с внешним получателем или на носитель",
+      "file": "r6_archive_to_external.yml",
+      "critical": true,
+      "hits": 0,
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "bool": {
+                "must": [
+                  {
+                    "term": {
+                      "event.action": "archive"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "bool": {
+                "must": [
+                  {
+                    "bool": {
+                      "should": [
+                        {
+                          "wildcard": {
+                            "file.path": {
+                              "value": "e:\\\\*",
+                              "case_insensitive": true
+                            }
+                          }
+                        },
+                        {
+                          "wildcard": {
+                            "file.path": {
+                              "value": "f:\\\\*",
+                              "case_insensitive": true
+                            }
+                          }
+                        },
+                        {
+                          "wildcard": {
+                            "file.path": {
+                              "value": "g:\\\\*",
+                              "case_insensitive": true
+                            }
+                          }
+                        }
+                      ],
+                      "minimum_should_match": 1
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "title": "Массовое обращение к файлам",
+      "file": "r7_mass_copy.yml",
+      "critical": true,
+      "hits": 8,
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "bool": {
+                "must": [
+                  {
+                    "range": {
+                      "files_count": {
+                        "gte": 10
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "title": "Уровень правила SIEM не ниже десяти",
+      "file": "r8_siem_rule_level.yml",
+      "critical": false,
+      "hits": 72,
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "bool": {
+                "must": [
+                  {
+                    "range": {
+                      "rule.level": {
+                        "gte": 10
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "title": "Копирование на съёмный носитель",
+      "file": "r9_copy_to_removable.yml",
+      "critical": true,
+      "hits": 24,
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "bool": {
+                "must": [
+                  {
+                    "terms": {
+                      "event.action": [
+                        "copy",
+                        "move",
+                        "archive"
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "bool": {
+                "must": [
+                  {
+                    "bool": {
+                      "should": [
+                        {
+                          "wildcard": {
+                            "file.path": {
+                              "value": "e:\\\\*",
+                              "case_insensitive": true
+                            }
+                          }
+                        },
+                        {
+                          "wildcard": {
+                            "file.path": {
+                              "value": "f:\\\\*",
+                              "case_insensitive": true
+                            }
+                          }
+                        },
+                        {
+                          "wildcard": {
+                            "file.path": {
+                              "value": "g:\\\\*",
+                              "case_insensitive": true
+                            }
+                          }
+                        }
+                      ],
+                      "minimum_should_match": 1
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "title": "Переименование файла при высоком уровне правила",
+      "file": "r10_rename_high_level.yml",
+      "critical": false,
+      "hits": 0,
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "bool": {
+                "must": [
+                  {
+                    "term": {
+                      "event.action": "rename"
+                    }
+                  },
+                  {
+                    "range": {
+                      "rule.level": {
+                        "gte": 10
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "alert_only": {
+    "stats": {
+      "tp": 86,
+      "fp": 24,
+      "fn": 2,
+      "tn": 24
+    },
+    "recall": 0.9773,
+    "precision": 0.7818,
+    "fpr": 0.5,
+    "specificity": 0.5,
+    "f1": 0.8687,
+    "accuracy": 0.8088,
+    "alerts": 110,
+    "prevented": 86
+  },
+  "with_blocking": {
+    "stats": {
+      "tp": 68,
+      "fp": 16,
+      "fn": 20,
+      "tn": 32
+    },
+    "recall": 0.7727,
+    "precision": 0.8095,
+    "fpr": 0.3333,
+    "specificity": 0.6667,
+    "f1": 0.7907,
+    "accuracy": 0.7353,
+    "alerts": 84,
+    "prevented": 68
+  },
+  "recall_ci": [
+    0.9209,
+    0.9937
+  ]
+}
