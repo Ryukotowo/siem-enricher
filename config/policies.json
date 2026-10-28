@@ -1,0 +1,623 @@
+{
+  "version": "1.0",
+  "metadata": {
+    "description": "Набор правил применения политик к обогащённым событиям (10 правил: отправка, секреты, массовый доступ, упаковка, кадровые данные, шифрование, сокрытие, архив наружу, открытое размещение, шифрование данных)",
+    "owner": "ВКР",
+    "updated": "2026-10-19"
+  },
+  "defaults": {
+    "decision": "allow",
+    "severity": "low"
+  },
+  "rules": [
+    {
+      "id": "POL-001",
+      "title": "Отправка конфиденциального файла во внешний адрес",
+      "description": "Конфиденциальный или более высокий класс + действие отправки/загрузки + внешний получатель. Признак утечки данных.",
+      "enabled": true,
+      "priority": 100,
+      "severity": "critical",
+      "tags": [
+        "exfiltration",
+        "data-leak"
+      ],
+      "when": {
+        "all": [
+          {
+            "field": "data_sensitivity",
+            "op": "gte",
+            "value": "confidential"
+          },
+          {
+            "field": "action",
+            "op": "in",
+            "value": [
+              "upload",
+              "send"
+            ]
+          },
+          {
+            "field": "external_destinations_count",
+            "op": "gte",
+            "value": 1
+          }
+        ]
+      },
+      "then": [
+        {
+          "type": "alert",
+          "channel": "siem",
+          "severity": "critical",
+          "message": "Возможная утечка: конфиденциальный файл отправлен во внешний адрес"
+        },
+        {
+          "type": "mask_field",
+          "fields": [
+            "files[*].path",
+            "file.path",
+            "file.name",
+            "user.name",
+            "raw_event.data.win.eventdata.targetFilename",
+            "raw_event.data.win.eventdata.sourceFilename",
+            "raw_event.data.win.eventdata.destinationUrl"
+          ],
+          "strategy": "hash"
+        },
+        {
+          "type": "tag",
+          "value": "dlp:exfiltration"
+        }
+      ]
+    },
+    {
+      "id": "POL-002",
+      "title": "Обращение к файлам класса secret",
+      "description": "Любое действие с файлом высшего класса конфиденциальности требует реакции и фиксации.",
+      "enabled": true,
+      "priority": 95,
+      "severity": "critical",
+      "tags": [
+        "secret",
+        "access-control"
+      ],
+      "when": {
+        "all": [
+          {
+            "field": "data_sensitivity",
+            "op": "eq",
+            "value": "secret"
+          },
+          {
+            "field": "sensitivity_confidence",
+            "op": "gte",
+            "value": 0.5
+          }
+        ]
+      },
+      "then": [
+        {
+          "type": "alert",
+          "channel": "siem",
+          "severity": "critical",
+          "message": "Доступ к объекту класса secret"
+        },
+        {
+          "type": "block",
+          "target": "process",
+          "mode": "dry_run",
+          "reason": "POL-002: объект класса secret"
+        },
+        {
+          "type": "tag",
+          "value": "dlp:secret-access"
+        }
+      ]
+    },
+    {
+      "id": "POL-003",
+      "title": "Массовое обращение к конфиденциальным файлам",
+      "description": "Более 10 файлов в одном событии с классом не ниже confidential — похоже на выгрузку каталога.",
+      "enabled": true,
+      "priority": 80,
+      "severity": "high",
+      "tags": [
+        "mass-access",
+        "staging"
+      ],
+      "when": {
+        "all": [
+          {
+            "field": "data_sensitivity",
+            "op": "gte",
+            "value": "confidential"
+          },
+          {
+            "field": "files_count",
+            "op": "gte",
+            "value": 10
+          }
+        ]
+      },
+      "then": [
+        {
+          "type": "alert",
+          "channel": "siem",
+          "severity": "high",
+          "message": "Массовое обращение к конфиденциальным файлам"
+        },
+        {
+          "type": "tag",
+          "value": "dlp:mass-access"
+        }
+      ]
+    },
+    {
+      "id": "POL-004",
+      "title": "Подготовка эксфильтрации: упаковка конфиденциальных данных",
+      "description": "Архивирование или шифрование конфиденциальных файлов — типовой этап подготовки к выносу данных.",
+      "enabled": true,
+      "priority": 75,
+      "severity": "high",
+      "tags": [
+        "staging",
+        "archive"
+      ],
+      "when": {
+        "all": [
+          {
+            "field": "data_sensitivity",
+            "op": "gte",
+            "value": "confidential"
+          },
+          {
+            "field": "action",
+            "op": "in",
+            "value": [
+              "archive",
+              "encrypt"
+            ]
+          },
+          {
+            "field": "risk_score",
+            "op": "gte",
+            "value": 0.5
+          }
+        ]
+      },
+      "then": [
+        {
+          "type": "alert",
+          "channel": "siem",
+          "severity": "high",
+          "message": "Упаковка конфиденциальных данных (archive/encrypt)"
+        },
+        {
+          "type": "tag",
+          "value": "dlp:staging"
+        }
+      ]
+    },
+    {
+      "id": "POL-005",
+      "title": "Доступ непривилегированного пользователя к кадровым/финансовым данным",
+      "description": "Файлы из каталогов HR/бухгалтерии/юридического отдела, к которым обратился пользователь без привилегий.",
+      "enabled": true,
+      "priority": 60,
+      "severity": "medium",
+      "tags": [
+        "insider",
+        "least-privilege"
+      ],
+      "when": {
+        "all": [
+          {
+            "field": "data_sensitivity",
+            "op": "gte",
+            "value": "confidential"
+          },
+          {
+            "field": "user.is_privileged",
+            "op": "eq",
+            "value": false
+          },
+          {
+            "field": "data_sensitivity_by_file[*].reason",
+            "op": "regex",
+            "value": "(?i)(hr|кадр|бухгалт|финанс|зарплат|юрид|legal|finance|payroll)"
+          }
+        ]
+      },
+      "then": [
+        {
+          "type": "alert",
+          "channel": "siem",
+          "severity": "medium",
+          "message": "Непривилегированный доступ к защищённому каталогу"
+        },
+        {
+          "type": "tag",
+          "value": "dlp:insider-risk"
+        }
+      ]
+    },
+    {
+      "id": "POL-006",
+      "title": "Копирование конфиденциального файла на съёмный носитель",
+      "description": "Действие copy/move в каталог съёмного носителя.",
+      "enabled": true,
+      "priority": 70,
+      "severity": "high",
+      "tags": [
+        "removable-media"
+      ],
+      "when": {
+        "all": [
+          {
+            "field": "data_sensitivity",
+            "op": "gte",
+            "value": "internal"
+          },
+          {
+            "field": "action",
+            "op": "in",
+            "value": [
+              "copy",
+              "move",
+              "write"
+            ]
+          },
+          {
+            "field": "files[*].path",
+            "op": "regex",
+            "value": "(?i)(\\\\removable|usb|mount|/media/|/mnt/|[e-z]:\\\\)"
+          }
+        ]
+      },
+      "then": [
+        {
+          "type": "alert",
+          "channel": "siem",
+          "severity": "high",
+          "message": "Копирование данных на съёмный носитель"
+        },
+        {
+          "type": "tag",
+          "value": "dlp:removable-media"
+        }
+      ]
+    },
+    {
+      "id": "POL-007",
+      "title": "Шифрование файлов с последующим переименованием",
+      "description": "Признак вредоносного шифрования (ransomware): encrypt и/или смена расширения.",
+      "enabled": true,
+      "priority": 90,
+      "severity": "critical",
+      "tags": [
+        "ransomware",
+        "integrity"
+      ],
+      "when": {
+        "all": [
+          {
+            "field": "action",
+            "op": "in",
+            "value": [
+              "encrypt",
+              "rename"
+            ]
+          },
+          {
+            "field": "files[*].extension",
+            "op": "regex",
+            "value": "(?i)^(\\.locked|\\.enc|\\.crypt|\\.encrypted|\\.[a-z0-9]{6,10})$"
+          }
+        ]
+      },
+      "then": [
+        {
+          "type": "alert",
+          "channel": "siem",
+          "severity": "critical",
+          "message": "Возможное шифрование файлов (ransomware)"
+        },
+        {
+          "type": "block",
+          "target": "process",
+          "mode": "dry_run",
+          "reason": "POL-007: подозрение на шифрование"
+        },
+        {
+          "type": "tag",
+          "value": "integrity:encryption"
+        }
+      ]
+    },
+    {
+      "id": "POL-008",
+      "title": "Длинная цепочка происхождения с внешним узлом",
+      "description": "Длинная цепочка происхождения с внешним узлом у защищаемых данных при действии, перемещающем данные. Требует класса не ниже служебного: длинная история открытого файла сама по себе не является нарушением.",
+      "enabled": true,
+      "priority": 50,
+      "severity": "medium",
+      "tags": [
+        "provenance"
+      ],
+      "when": {
+        "all": [
+          {
+            "field": "data_sensitivity",
+            "op": "gte",
+            "value": "internal"
+          },
+          {
+            "field": "action",
+            "op": "in",
+            "value": [
+              "upload",
+              "send",
+              "copy",
+              "move",
+              "archive",
+              "encrypt"
+            ]
+          },
+          {
+            "field": "provenance_depth",
+            "op": "gte",
+            "value": 4
+          },
+          {
+            "field": "external_destinations_count",
+            "op": "gte",
+            "value": 1
+          },
+          {
+            "field": "risk_score",
+            "op": "gte",
+            "value": 0.4
+          }
+        ]
+      },
+      "then": [
+        {
+          "type": "alert",
+          "channel": "siem",
+          "severity": "medium",
+          "message": "Длинная цепочка происхождения с внешним узлом"
+        }
+      ]
+    },
+    {
+      "id": "POL-009",
+      "title": "Контрольный пример: публичные файлы",
+      "description": "Демонстрация «белого» правила — фиксируется тег, реакция не требуется.",
+      "enabled": true,
+      "priority": 10,
+      "severity": "low",
+      "tags": [
+        "baseline"
+      ],
+      "when": {
+        "all": [
+          {
+            "field": "data_sensitivity",
+            "op": "eq",
+            "value": "public"
+          },
+          {
+            "field": "risk_score",
+            "op": "lt",
+            "value": 0.3
+          }
+        ]
+      },
+      "then": [
+        {
+          "type": "tag",
+          "value": "baseline:public"
+        }
+      ]
+    },
+    {
+      "id": "POL-010",
+      "title": "Шифрование защищаемых данных (ransomware)",
+      "description": "Действие шифрования над файлом класса не ниже служебного. Массовое изменение данных шифровальщиком приводит к недоступности информации, поэтому реакция — блокировка.",
+      "enabled": true,
+      "priority": 120,
+      "severity": "critical",
+      "tags": [
+        "ransomware",
+        "integrity"
+      ],
+      "when": {
+        "all": [
+          {
+            "field": "data_sensitivity",
+            "op": "gte",
+            "value": "internal"
+          },
+          {
+            "field": "action",
+            "op": "in",
+            "value": [
+              "encrypt"
+            ]
+          }
+        ]
+      },
+      "then": [
+        {
+          "type": "alert",
+          "channel": "siem",
+          "severity": "critical",
+          "message": "Шифрование защищаемых данных (признак шифровальщика)"
+        },
+        {
+          "type": "block",
+          "target": "process",
+          "mode": "dry_run",
+          "reason": "POL-010: шифрование защищаемых данных"
+        },
+        {
+          "type": "tag",
+          "value": "dlp:ransomware"
+        }
+      ]
+    },
+    {
+      "id": "POL-011",
+      "title": "Копирование защищаемых данных на съёмный носитель",
+      "description": "В событии есть объект на съёмном носителе (том E:…Z:, каталог /media, /mnt) и класс данных не ниже конфиденциального. Типовой канал выноса информации без сети.",
+      "enabled": true,
+      "priority": 110,
+      "severity": "critical",
+      "tags": [
+        "removable-media",
+        "data-leak"
+      ],
+      "when": {
+        "all": [
+          {
+            "field": "removable_destinations_count",
+            "op": "gte",
+            "value": 1
+          },
+          {
+            "field": "data_sensitivity",
+            "op": "gte",
+            "value": "confidential"
+          },
+          {
+            "field": "action",
+            "op": "in",
+            "value": [
+              "copy",
+              "move",
+              "write",
+              "archive"
+            ]
+          }
+        ]
+      },
+      "then": [
+        {
+          "type": "alert",
+          "channel": "siem",
+          "severity": "critical",
+          "message": "Копирование защищаемых данных на съёмный носитель"
+        },
+        {
+          "type": "block",
+          "target": "process",
+          "mode": "dry_run",
+          "reason": "POL-011: вынос данных на съёмном носителе"
+        },
+        {
+          "type": "tag",
+          "value": "dlp:removable-media"
+        }
+      ]
+    },
+    {
+      "id": "POL-012",
+      "title": "Массовое копирование защищаемых данных",
+      "description": "Восемь и более файлов в одном событии с классом не ниже конфиденциального при действии копирования, перемещения или архивирования. Признак выгрузки каталога или подготовки крупной утечки.",
+      "enabled": true,
+      "priority": 105,
+      "severity": "critical",
+      "tags": [
+        "mass-copy",
+        "data-leak"
+      ],
+      "when": {
+        "all": [
+          {
+            "field": "data_sensitivity",
+            "op": "gte",
+            "value": "confidential"
+          },
+          {
+            "field": "files_count",
+            "op": "gte",
+            "value": 8
+          },
+          {
+            "field": "action",
+            "op": "in",
+            "value": [
+              "copy",
+              "move",
+              "archive",
+              "read"
+            ]
+          }
+        ]
+      },
+      "then": [
+        {
+          "type": "alert",
+          "channel": "siem",
+          "severity": "critical",
+          "message": "Массовое копирование защищаемых данных"
+        },
+        {
+          "type": "block",
+          "target": "process",
+          "mode": "dry_run",
+          "reason": "POL-012: массовое копирование защищаемых данных"
+        },
+        {
+          "type": "tag",
+          "value": "dlp:mass-copy"
+        }
+      ]
+    },
+    {
+      "id": "POL-013",
+      "title": "Архивирование защищаемых данных",
+      "description": "Упаковка файлов класса не ниже конфиденциального без внешнего адресата и без съёмного носителя. Архив — типовой первый шаг подготовки выноса информации.",
+      "enabled": true,
+      "priority": 100,
+      "severity": "high",
+      "tags": [
+        "staging",
+        "archive"
+      ],
+      "when": {
+        "all": [
+          {
+            "field": "data_sensitivity",
+            "op": "gte",
+            "value": "confidential"
+          },
+          {
+            "field": "action",
+            "op": "in",
+            "value": [
+              "archive"
+            ]
+          }
+        ]
+      },
+      "then": [
+        {
+          "type": "alert",
+          "channel": "siem",
+          "severity": "high",
+          "message": "Архивирование защищаемых данных"
+        },
+        {
+          "type": "block",
+          "target": "process",
+          "mode": "dry_run",
+          "reason": "POL-013: архивирование защищаемых данных"
+        },
+        {
+          "type": "tag",
+          "value": "dlp:staging-archive"
+        }
+      ]
+    }
+  ]
+}

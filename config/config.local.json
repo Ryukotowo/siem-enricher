@@ -1,0 +1,110 @@
+{
+  "schema_version": "1.1",
+  "service": {
+    "name": "siem-enricher",
+    "instance_id": "enricher-local-demo",
+    "environment": "dev",
+    "log_level": "INFO",
+    "log_format": "human"
+  },
+  "source": {
+    "type": "file_replay",
+    "options": {
+      "path": "var/generated_events.jsonl",
+      "format": "jsonl",
+      "follow": false,
+      "loop": false,
+      "interval_ms": 0,
+      "encoding": "utf-8"
+    }
+  },
+  "sink": {
+    "type": "file_jsonl",
+    "options": {
+      "path": "var/enriched_events.jsonl",
+      "mode": "overwrite",
+      "pretty": false
+    }
+  },
+  "extractor": {
+    "max_files_per_event": 32,
+    "max_users_per_event": 8,
+    "drop_system_paths": false,
+    "system_path_prefixes": ["c:\\windows\\", "/proc/", "/sys/"],
+    "aliases": {},
+    "scan_embedded_paths": true,
+    "max_embedded_paths": 8
+  },
+  "ml": {
+    "type": "auto",
+    "artifact_path": "ml/artifacts/sensitivity_transformer",
+    "label_encoder_file": "label_encoder.pkl",
+    "labels_file": "config/sensitivity_labels.json",
+    "model_version": "auto",
+    "default_level": "internal",
+    "confidence_floor": 0.35,
+    "aggregate": "max",
+    "max_length": 64,
+    "batch_size": 16,
+    "device": "auto",
+    "text_template": "{name}",
+    "hybrid_enabled": true,
+    "hybrid_rule_min_confidence": 0.5,
+    "hybrid_confidence_blend": 0.6,
+    "hybrid_allow_downgrade": true,
+    "hybrid_downgrade_min_rule_confidence": 0.5,
+    "hybrid_downgrade_max_model_confidence": 0.85,
+    "hybrid_policy_override": true,
+    "hybrid_policy_override_min_weight": 0.8
+  },
+  "provenance": {
+    "backend": "sqlite",
+    "sqlite_path": "var/state/provenance.db",
+    "ttl_seconds": 604800,
+    "max_chain_depth": 16,
+    "external_actions": ["upload", "send", "post", "webhook"]
+  },
+  "risk": {
+    "thresholds": { "medium": 0.3, "high": 0.6, "critical": 0.85 },
+    "weights": {
+      "sensitivity": 0.45,
+      "confidence": 0.15,
+      "action": 0.2,
+      "external_destination": 0.1,
+      "privileged_user": 0.05,
+      "volume": 0.05
+    },
+    "action_multipliers": {
+      "unknown": 0.2,
+      "read": 0.25,
+      "write": 0.35,
+      "create": 0.3,
+      "copy": 0.5,
+      "move": 0.5,
+      "rename": 0.4,
+      "archive": 0.7,
+      "encrypt": 0.85,
+      "upload": 1.0,
+      "send": 1.0,
+      "delete": 0.6,
+      "execute": 0.45
+    }
+  },
+  "policy": {
+    "file": "config/policies.json",
+    "mode": "dry_run",
+    "audit_log": "var/logs/policy_audit.jsonl",
+    "stop_on_block": true
+  },
+  "http": {
+    "host": "127.0.0.1",
+    "port": 8080,
+    "metrics_port": 9101
+  },
+  "runtime": {
+    "workers": 1,
+    "queue_max_size": 10000,
+    "shutdown_grace_seconds": 15,
+    "checkpoint_path": "var/state/checkpoint.json"
+  }
+}
