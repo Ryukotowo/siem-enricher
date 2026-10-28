@@ -1,0 +1,12 @@
+title: Обращение к файлу в защищённом каталоге
+id: 5f1a0003-0000-4000-8000-000000000003
+status: experimental
+logsource:
+  category: file_event
+detection:
+  selection_dir:
+    file.path|contains: ["\\hr\\", "\\бухгалтер", "\\юридическ", "\\клиент", "\\медицин", "\\finance", "\\legal"]
+  selection_action:
+    event.action: [upload, send, copy, move, archive, read]
+  condition: selection_dir and selection_action
+level: medium

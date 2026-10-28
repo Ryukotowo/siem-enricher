@@ -1,0 +1,10 @@
+title: Массовое обращение к файлам
+id: 5f1a0007-0000-4000-8000-000000000007
+status: experimental
+logsource:
+  category: file_event
+detection:
+  selection:
+    files_count|gte: 10
+  condition: selection
+level: critical

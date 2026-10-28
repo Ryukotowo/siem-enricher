@@ -1,0 +1,12 @@
+title: Ключевое слово в имени файла при действии с данными
+id: 5f1a0001-0000-4000-8000-000000000001
+status: experimental
+description: Типовое правило DLP на ключевые слова в имени файла
+logsource:
+  category: file_event
+detection:
+  selection:
+    file.name|contains: ["зарплат", "ведомост", "паспорт", "снилс", "анкет", "договор", "клиент", "счет", "счёт", "отчет", "отчёт", "финанс", "диагноз", "медиц", "приказ", "payroll", "salary", "invoice", "contract", "customer"]
+    event.action: [upload, send, copy, move]
+  condition: selection
+level: high

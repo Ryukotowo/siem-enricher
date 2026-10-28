@@ -1,0 +1,11 @@
+title: Переименование файла при высоком уровне правила
+id: 5f1a0010-0000-4000-8000-000000000010
+status: experimental
+logsource:
+  category: file_event
+detection:
+  selection:
+    event.action: rename
+    rule.level|gte: 10
+  condition: selection
+level: medium

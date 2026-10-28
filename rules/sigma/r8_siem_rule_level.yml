@@ -1,0 +1,10 @@
+title: Уровень правила SIEM не ниже десяти
+id: 5f1a0008-0000-4000-8000-000000000008
+status: experimental
+logsource:
+  category: file_event
+detection:
+  selection:
+    rule.level|gte: 10
+  condition: selection
+level: high

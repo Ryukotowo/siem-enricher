@@ -1,0 +1,12 @@
+title: Отправка файла во внешний адрес
+id: 5f1a0004-0000-4000-8000-000000000004
+status: experimental
+logsource:
+  category: file_event
+detection:
+  selection_action:
+    event.action: [upload, send]
+  selection_dest:
+    destination.ip|exists: true
+  condition: selection_action and selection_dest
+level: critical
