@@ -56,3 +56,6 @@ pip-ephem-wheel-cache-*
 pip-install-*
 pip-metadata-*
 pip-unpack-*
+
+# Снимки для отчёта
+var/screens/

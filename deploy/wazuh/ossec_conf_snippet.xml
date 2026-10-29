@@ -1,0 +1,18 @@
+  <!-- Исполнитель блокировки: активное реагирование Wazuh -->
+  <command>
+    <name>quarantine</name>
+    <executable>quarantine.sh</executable>
+    <timeout_allowed>no</timeout_allowed>
+  </command>
+
+  <active-response>
+    <command>quarantine</command>
+    <location>server</location>
+    <rules_id>100100</rules_id>
+  </active-response>
+
+  <!-- Приём событий сервиса обогащения через файл -->
+  <localfile>
+    <log_format>json</log_format>
+    <location>/var/ossec/test_events.log</location>
+  </localfile>

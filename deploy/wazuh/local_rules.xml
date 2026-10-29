@@ -1,0 +1,8 @@
+<group name="siem_enricher,">
+  <rule id="100100" level="12">
+    <decoded_as>json</decoded_as>
+    <field name="dlp.decision">^block$</field>
+    <description>Сервис обогащения: блокировка файла $(dlp.file)</description>
+    <options>no_full_log</options>
+  </rule>
+</group>
