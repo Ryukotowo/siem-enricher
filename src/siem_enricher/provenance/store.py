@@ -296,6 +296,25 @@ class SqliteProvenanceStore(ProvenanceStore):
             edges = self._conn.execute("SELECT COUNT(*) AS c FROM edges").fetchone()["c"]
         return {"backend": self.backend, "nodes": int(nodes), "edges": int(edges), "path": str(self.path)}
 
+    def trim_node_edges(self, node_id: str, keep: int) -> int:
+        """Оставить у узла не больше keep самых свежих рёбер."""
+        if keep <= 0:
+            return 0
+        with self._lock:
+            cursor = self._conn.execute(
+                """
+                DELETE FROM edges
+                WHERE (src = ? OR dst = ?)
+                  AND id NOT IN (
+                      SELECT id FROM edges WHERE src = ? OR dst = ?
+                      ORDER BY ts DESC LIMIT ?
+                  )
+                """,
+                (node_id, node_id, node_id, node_id, keep),
+            )
+            self._commit_if_needed()
+            return cursor.rowcount or 0
+
     def close(self) -> None:
         with self._lock:
             self._conn.commit()

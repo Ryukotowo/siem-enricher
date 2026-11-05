@@ -46,7 +46,10 @@ class ProvenanceBuilder:
         self.chain_cache_size = 4096
         self._chain_cache: OrderedDict[tuple[str, object], tuple[int, object]] = OrderedDict()
         self._edge_epoch = 0
-        self.edge_limit = 400
+        self.edge_limit = 120
+        self.max_edges_per_path = 64
+        self._edge_memo: dict[str, list[object]] = {}
+        self._trim_counter = 0
         self.ttl_seconds = ttl_seconds
         self.external_actions = {str(a).lower() for a in external_actions}
 
@@ -61,6 +64,7 @@ class ProvenanceBuilder:
 
     def record(self, event: NormalizedEvent) -> ProvenanceGraph:
         """Разобрать событие в узлы и рёбра графа и сохранить их в хранилище."""
+        self._edge_memo.clear()
         graph = self.build(event)
         if graph.nodes:
             self.store.upsert_nodes(list(graph.nodes.values()))
@@ -68,7 +72,22 @@ class ProvenanceBuilder:
             self.store.add_edges(graph.edges)
             self._edge_epoch += len(graph.edges)
             self._invalidate_touched(event)
+            self._trim_history(event)
         return graph
+
+    def _trim_history(self, event: NormalizedEvent) -> None:
+        """Ограничить окно истории: у каждого файла не больше max_edges_per_path рёбер."""
+        trim = getattr(self.store, "trim_node_edges", None)
+        if trim is None:
+            return
+        self._trim_counter += 1
+        if self._trim_counter % 32 != 0 or not event.files:
+            return
+        for item in event.files:
+            path = getattr(item, "path", None)
+            if not path:
+                continue
+            trim(make_node_id(EntityKind.FILE, str(path)), self.max_edges_per_path)
 
     def _invalidate_touched(self, event: NormalizedEvent) -> None:
         """Сбросить кэш только для путей, которых коснулось событие."""
@@ -193,6 +212,27 @@ class ProvenanceBuilder:
                 )
         return graph
 
+    def _edges_for(self, node_ids: list[str]):
+        """Рёбра инцидентные узлам: в пределах события результаты переиспользуются."""
+        collected: dict[object, object] = {}
+        missing: list[str] = []
+        for node_id in node_ids:
+            cached = self._edge_memo.get(node_id)
+            if cached is None:
+                missing.append(node_id)
+            else:
+                for edge in cached:
+                    collected[id(edge)] = edge
+        if missing:
+            fresh = self.store.edges_touching(missing, limit=self.edge_limit)
+            for edge in fresh:
+                collected[id(edge)] = edge
+                self._edge_memo.setdefault(edge.src, []).append(edge)
+                self._edge_memo.setdefault(edge.dst, []).append(edge)
+            for node_id in missing:
+                self._edge_memo.setdefault(node_id, [])
+        return list(collected.values())
+
     def chain_for(
         self,
         file_path: str,
@@ -217,7 +257,7 @@ class ProvenanceBuilder:
         for _ in range(self.max_chain_depth):
             if not frontier:
                 break
-            edges = self.store.edges_touching(sorted(frontier), limit=self.edge_limit)
+            edges = self._edges_for(sorted(frontier))
             next_frontier: set[str] = set()
             for edge in edges:
                 key: int | str = edge.edge_id if edge.edge_id is not None else f"{edge.src}|{edge.dst}|{edge.timestamp}"
