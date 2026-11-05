@@ -246,10 +246,16 @@ class TransformerSensitivityClassifier(SensitivityClassifier):
         category, probability = str(pairs[0][0]), float(pairs[0][1])
         mapped = self.category_map.get(category)
         if mapped is None:
-            level = self.unknown_category_level
-            reason = f"категория модели «{category}» не сопоставлена классу конфиденциальности"
-            if self.metrics is not None:
-                self.metrics.ml_fallback.inc({"reason": "unknown_category"})
+            # Дообученная на уровнях модель отдаёт сразу класс конфиденциальности.
+            direct = SensitivityLevel.from_value(category, default=None)
+            if direct is not None:
+                level = direct
+                reason = f"модель {self.algorithm}: класс «{level.value}» определён напрямую"
+            else:
+                level = self.unknown_category_level
+                reason = f"категория модели «{category}» не сопоставлена классу конфиденциальности"
+                if self.metrics is not None:
+                    self.metrics.ml_fallback.inc({"reason": "unknown_category"})
         else:
             level = SensitivityLevel.from_value(mapped, default=self.unknown_category_level)
             reason = f"модель {self.algorithm}: категория «{category}» → класс «{level.value}»"

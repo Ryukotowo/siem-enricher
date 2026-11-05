@@ -52,10 +52,13 @@ class HeuristicClassifierTest(unittest.TestCase):
                 self.assertGreaterEqual(assessment.level.rank, SensitivityLevel.CONFIDENTIAL.rank)
 
     def test_internal_documents(self) -> None:
-        for path in (
-            r"C:\Projects\Отчет_о_работе_2025.docx",
-            r"C:\Общие\Регламент_информационной_безопасности.pdf",
-        ):
+        # Проектный каталог трактуется как интеллектуальная собственность (confidential),
+        # служебным остаётся только каталог общих документов.
+        self.assertEqual(
+            self.classifier.predict(r"C:\Projects\Отчет_о_работе_2025.docx").level,
+            SensitivityLevel.CONFIDENTIAL,
+        )
+        for path in (r"C:\Общие\Регламент_информационной_безопасности.pdf",):
             with self.subTest(path=path):
                 self.assertEqual(self.classifier.predict(path).level, SensitivityLevel.INTERNAL)
 
@@ -68,7 +71,7 @@ class HeuristicClassifierTest(unittest.TestCase):
     def test_scores_include_policy_markers_only_when_present(self) -> None:
         """Признаки размещения появляются только при срабатывании правил каталога/пометок."""
         inside = self.classifier.predict(r"C:\Projects\Отчет_о_работе_2025.docx")
-        self.assertIn("policy:internal", inside.scores)  # сработал признак каталога проектов
+        self.assertIn("policy:confidential", inside.scores)  # каталог проектов = интеллектуальная собственность
         outside = self.classifier.predict(r"X:\data\файл.bin")
         self.assertEqual([key for key in outside.scores if key.startswith("policy:")], [])
 
