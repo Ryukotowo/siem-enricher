@@ -197,7 +197,7 @@ def describe_ml_stack(config: MlConfig, labels_path: str | Path | None = None) -
     }
 
 
-def build_classifier(
+def _build_classifier(
     config: MlConfig,
     metrics: Any = None,
     labels_path: str | Path | None = None,
@@ -338,3 +338,18 @@ __all__ = [
     "model_categories_catalog",
     "resolve_labels_path",
 ]
+
+
+def build_classifier(
+    config: MlConfig,
+    metrics: Any = None,
+    labels_path: str | Path | None = None,
+) -> SensitivityClassifier:
+    """Создать классификатор согласно конфигурации, при необходимости — с кэшем по пути."""
+    classifier = _build_classifier(config, metrics=metrics, labels_path=labels_path)
+    cache_size = int(getattr(config, "cache_size", 0) or 0)
+    if cache_size > 0:
+        from siem_enricher.ml.cache import CachingClassifier
+
+        return CachingClassifier(classifier, max_entries=cache_size)
+    return classifier

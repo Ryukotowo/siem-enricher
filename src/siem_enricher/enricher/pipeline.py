@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import replace
-from typing import Any, Mapping, Sequence
+from typing import Callable, Any, Mapping, Sequence
 
 from siem_enricher.config import AppConfig
 from siem_enricher.extractor import MetadataExtractor
@@ -50,6 +50,19 @@ class EnrichmentPipeline:
         self.policy_engine = policy_engine
         self.metrics = metrics or service_metrics()
         self.store = store or builder.store
+        self.observers: list[Callable[[dict[str, Any]], None]] = []
+
+    def add_observer(self, callback: Callable[[dict[str, Any]], None]) -> None:
+        """Подписать наблюдателя на обогащённые документы (панель аналитика, отладка)."""
+        self.observers.append(callback)
+
+    def _notify_observers(self, document: dict[str, Any]) -> None:
+        for callback in self.observers:
+            try:
+                callback(document)
+            except Exception as exc:  # noqa: BLE001 - наблюдатель не должен ломать обработку
+                logger.warning("Наблюдатель конвейера завершился ошибкой",
+                               extra={"reason": str(exc)})
 
     @classmethod
     def from_config(
@@ -193,6 +206,7 @@ class EnrichmentPipeline:
                     "duration_ms": round(result.duration_ms, 3),
                 },
             )
+            self._notify_observers(document)
             return enriched
 
     def enrich_document(

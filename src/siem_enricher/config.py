@@ -45,6 +45,7 @@ DEFAULTS: dict[str, Any] = {
         "aggregate": "max",
         "max_length": 64,
         "batch_size": 16,
+        "cache_size": 4096,
         "device": "auto",
         "text_template": "{name}",
         "hybrid_enabled": True,
@@ -196,6 +197,7 @@ class MlConfig:
     aggregate: str = "max"
     max_length: int = 64
     batch_size: int = 16
+    cache_size: int = 4096
     device: str = "auto"
     text_template: str = "{name}"
     hybrid_enabled: bool = True
@@ -334,6 +336,8 @@ class AppConfig:
             )
         if self.ml.max_length <= 0:
             errors.append("ml.max_length должен быть > 0")
+        if self.ml.cache_size < 0:
+            errors.append("ml.cache_size должен быть >= 0")
         if self.ml.batch_size <= 0:
             errors.append("ml.batch_size должен быть > 0")
         device = (self.ml.device or "auto").lower()

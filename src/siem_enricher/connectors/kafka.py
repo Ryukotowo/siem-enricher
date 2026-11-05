@@ -86,6 +86,13 @@ class KafkaSource(SourceConnector):
             try:
                 batches = await self._consumer.getmany(timeout_ms=int(self.poll_timeout * 1000))
             except Exception as exc:  # noqa: BLE001 - переживаем обрывы соединения
+                if exc.__class__.__name__ == "UnsupportedCodecError" or "codec" in str(exc).lower():
+                    logger.error(
+                        "Kafka: нет кодека сжатия для топика — установите cramjam "
+                        "(pip install 'siem-enricher[kafka]')",
+                        extra={"topics": self.topics, "reason": str(exc)},
+                    )
+                    raise
                 logger.error("Ошибка чтения из Kafka", extra={"reason": str(exc)})
                 if self.metrics is not None:
                     self.metrics.source_errors.inc({"source": self.name})
@@ -133,6 +140,8 @@ class KafkaSink(SinkConnector):
         self.topic = str(self._option("topic", "siem.enriched.events"))
         self.acks = str(self._option("acks", "all"))
         self.linger_ms = int(self._option("linger_ms", 20))
+        self.max_document_bytes = int(self._option("max_document_bytes", 900_000))
+        self._oversize_warned = False
         self._producer: Any = None
 
     async def start(self) -> None:
@@ -155,7 +164,19 @@ class KafkaSink(SinkConnector):
         if self._producer is None:
             await self.start()
         try:
-            await self._producer.send_and_wait(self.topic, document, key=str(document.get("event_id")).encode())
+            payload = document
+            size = len(json.dumps(document, ensure_ascii=False, default=str).encode("utf-8"))
+            if size > self.max_document_bytes:
+                payload = _slim_document(document)
+                if not self._oversize_warned:
+                    logger.warning(
+                        "Документ урезан для Kafka: превышен предел размера",
+                        extra={"topic": self.topic, "original_bytes": size,
+                               "limit": self.max_document_bytes},
+                    )
+                    self._oversize_warned = True
+            await self._producer.send_and_wait(self.topic, payload,
+                                               key=str(document.get("event_id")).encode())
         except Exception as exc:  # noqa: BLE001
             logger.error("Ошибка отправки в Kafka", extra={"topic": self.topic, "reason": str(exc)})
             if self.metrics is not None:
@@ -175,3 +196,11 @@ class KafkaSink(SinkConnector):
         info = super().describe()
         info.update({"topic": self.topic, "bootstrap_servers": self.bootstrap})
         return info
+
+
+def _slim_document(document: dict[str, Any]) -> dict[str, Any]:
+    """Компактная версия документа для топика: без сырого события и тяжёлых структур."""
+    slim = {key: value for key, value in document.items()
+            if key not in ("raw_event", "files", "provenance_chain", "provenance_chains")}
+    slim["files_count"] = len(document.get("files") or [])
+    return slim

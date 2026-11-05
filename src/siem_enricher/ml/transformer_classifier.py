@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from collections import OrderedDict
 from typing import Any, Iterable, Mapping, Sequence
 
 from siem_enricher.logging_setup import get_logger
@@ -120,6 +121,8 @@ class TransformerSensitivityClassifier(SensitivityClassifier):
         self.batch_size = max(1, int(batch_size))
         self.device_spec = device
         self.text_template = text_template
+        self.encode_cache_size = 8192
+        self._encode_cache: OrderedDict[str, list[int]] = OrderedDict()
         self.unknown_category_level = unknown_category_level
         self.metrics = metrics
         self.model_version = model_version or self._derive_version()
@@ -224,7 +227,7 @@ class TransformerSensitivityClassifier(SensitivityClassifier):
             padding=True,
         )
         encoded = {key: value.to(self.device) for key, value in encoded.items()}
-        with torch.no_grad():
+        with torch.inference_mode():
             logits = self._model(**encoded).logits
             probabilities = torch.softmax(logits, dim=-1).cpu().tolist()
         return probabilities

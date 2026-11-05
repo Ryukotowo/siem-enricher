@@ -79,6 +79,9 @@ async def enrich(
 ) -> dict[str, Any]:
     runtime = _runtime(request)
     _, _, document = runtime.pipeline.enrich_document(source, payload, apply_policies=apply_policies)
+    buffer = getattr(request.app.state, "panel_buffer", None)
+    if buffer is not None:
+        buffer.add(document)
     return document
 
 
@@ -94,8 +97,12 @@ async def enrich_batch(
     if not isinstance(events, list):
         return {"error": "ожидался объект {events: [...]} или список событий", "results": []}
     enriched = await runtime.enrich_documents(events, source=source, apply_policies=apply_policies)
+    documents = [item.siem_document() for item in enriched]
+    buffer = getattr(request.app.state, "panel_buffer", None)
+    if buffer is not None:
+        buffer.extend(documents)
     return {
-        "results": [item.siem_document() for item in enriched],
+        "results": documents,
         "summary": runtime.pipeline.summarize(enriched),
     }
 

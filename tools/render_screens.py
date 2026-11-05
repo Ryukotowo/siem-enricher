@@ -13,7 +13,7 @@ OUT = Path(r"C:\Users\idv1102\Documents\deepseek-harness\default-workspace\vkr\f
 CONSOLAS = Path(r"C:\Windows\Fonts\consola.ttf")
 SEGOE = Path(r"C:\Windows\Fonts\segoeui.ttf")
 
-WIDTH = 1180
+WIDTH = 1540
 TITLE_H = 32
 PAD_X = 14
 PAD_Y = 8

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+from collections import OrderedDict
 from typing import Iterable, Sequence
 
 from siem_enricher.config import ProvenanceConfig
@@ -42,6 +43,10 @@ class ProvenanceBuilder:
     ) -> None:
         self.store = store
         self.max_chain_depth = max_chain_depth
+        self.chain_cache_size = 4096
+        self._chain_cache: OrderedDict[tuple[str, object], tuple[int, object]] = OrderedDict()
+        self._edge_epoch = 0
+        self.edge_limit = 400
         self.ttl_seconds = ttl_seconds
         self.external_actions = {str(a).lower() for a in external_actions}
 
@@ -61,7 +66,21 @@ class ProvenanceBuilder:
             self.store.upsert_nodes(list(graph.nodes.values()))
         if graph.edges:
             self.store.add_edges(graph.edges)
+            self._edge_epoch += len(graph.edges)
+            self._invalidate_touched(event)
         return graph
+
+    def _invalidate_touched(self, event: NormalizedEvent) -> None:
+        """Сбросить кэш только для путей, которых коснулось событие."""
+        touched = {
+            str(item.path).strip().lower()
+            for item in (event.files or [])
+            if getattr(item, "path", None)
+        }
+        if not touched or not self._chain_cache:
+            return
+        for key in [key for key in self._chain_cache if key[0] in touched]:
+            self._chain_cache.pop(key, None)
 
     def build(self, event: NormalizedEvent) -> ProvenanceGraph:
         """Построить граф происхождения для одного события (без сохранения)."""
@@ -181,6 +200,15 @@ class ProvenanceBuilder:
         as_of: datetime | None = None,
     ) -> ProvenanceChain:
         """Восстановить цепочку происхождения файла по накопленному графу."""
+        cache_key = (str(file_path).strip().lower(), as_of)
+        cached = self._chain_cache.get(cache_key)
+        if cached is not None and event is None:
+            epoch, chain = cached
+            if epoch == self._edge_epoch:
+                self._chain_cache.move_to_end(cache_key)
+                return chain  # type: ignore[return-value]
+            self._chain_cache.pop(cache_key, None)
+
         file_node_id = make_node_id(EntityKind.FILE, file_path)
         collected: dict[int | str, ProvenanceEdge] = {}
         visited: set[str] = {file_node_id}
@@ -189,7 +217,7 @@ class ProvenanceBuilder:
         for _ in range(self.max_chain_depth):
             if not frontier:
                 break
-            edges = self.store.edges_touching(sorted(frontier))
+            edges = self.store.edges_touching(sorted(frontier), limit=self.edge_limit)
             next_frontier: set[str] = set()
             for edge in edges:
                 key: int | str = edge.edge_id if edge.edge_id is not None else f"{edge.src}|{edge.dst}|{edge.timestamp}"

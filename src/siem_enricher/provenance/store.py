@@ -52,6 +52,26 @@ class ProvenanceStore(ABC):
 
     backend = "abstract"
 
+    def _commit_if_needed(self) -> None:
+        """Фиксировать транзакцию не на каждое событие, а пачками."""
+        connection = getattr(self, "_conn", None)
+        if connection is None:
+            return
+        self._pending = getattr(self, "_pending", 0) + 1
+        if self._pending >= getattr(self, "commit_every", 200):
+            connection.commit()
+            self._pending = 0
+
+    def flush(self) -> None:
+        """Принудительно записать накопленные изменения на диск."""
+        connection = getattr(self, "_conn", None)
+        lock = getattr(self, "_lock", None)
+        if connection is None or lock is None:
+            return
+        with lock:
+            connection.commit()
+            self._pending = 0
+
     @abstractmethod
     def upsert_nodes(self, nodes: Sequence[ProvenanceNode]) -> int:
         """Добавить или обновить узлы."""
@@ -77,6 +97,7 @@ class ProvenanceStore(ABC):
         """Статистика хранилища."""
 
     def close(self) -> None:
+        self.flush()
         """Освободить ресурсы."""
 
     def store_graph(self, graph: ProvenanceGraph) -> int:
@@ -153,6 +174,14 @@ class InMemoryProvenanceStore(ProvenanceStore):
             return ProvenanceGraph(nodes=dict(self._nodes), edges=list(self._edges))
 
 
+SQLITE_INDEXES = """
+CREATE INDEX IF NOT EXISTS idx_edges_src ON edges(src);
+CREATE INDEX IF NOT EXISTS idx_edges_dst ON edges(dst);
+CREATE INDEX IF NOT EXISTS idx_edges_ts ON edges(ts);
+CREATE INDEX IF NOT EXISTS idx_nodes_kind_key ON nodes(kind, key);
+CREATE INDEX IF NOT EXISTS idx_nodes_last_seen ON nodes(last_seen);
+"""
+
 class SqliteProvenanceStore(ProvenanceStore):
     """Хранилище на SQLite: переживает перезапуск сервиса, не требует внешнего сервера."""
 
@@ -169,7 +198,10 @@ class SqliteProvenanceStore(ProvenanceStore):
                 self._conn.execute("PRAGMA journal_mode=WAL")
             self._conn.execute("PRAGMA synchronous=NORMAL")
             self._conn.executescript(SQLITE_SCHEMA)
+            self._conn.executescript(SQLITE_INDEXES)
             self._conn.commit()
+        self.commit_every = 200
+        self._pending = 0
 
     def upsert_nodes(self, nodes: Sequence[ProvenanceNode]) -> int:
         if not nodes:
@@ -191,7 +223,7 @@ class SqliteProvenanceStore(ProvenanceStore):
                 """,
                 rows,
             )
-            self._conn.commit()
+            self._commit_if_needed()
         return len(rows)
 
     def add_edges(self, edges: Sequence[ProvenanceEdge]) -> int:
@@ -210,7 +242,7 @@ class SqliteProvenanceStore(ProvenanceStore):
                 """,
                 rows,
             )
-            self._conn.commit()
+            self._commit_if_needed()
         return cursor.rowcount if cursor.rowcount and cursor.rowcount > 0 else len(rows)
 
     def edges_touching(self, node_ids: Sequence[str], limit: int = 2000) -> list[ProvenanceEdge]:
@@ -266,6 +298,7 @@ class SqliteProvenanceStore(ProvenanceStore):
 
     def close(self) -> None:
         with self._lock:
+            self._conn.commit()
             self._conn.close()
 
     @staticmethod

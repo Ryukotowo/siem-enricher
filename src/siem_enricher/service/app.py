@@ -70,6 +70,13 @@ def create_app(
     app.state.runtime = runtime
     app.state.run_pipeline = run_pipeline
     app.state.started_at = time.time()
+
+    from siem_enricher.service.panel import EventBuffer, register_panel
+
+    panel_buffer = EventBuffer(500)
+    if register_panel(app, panel_buffer):
+        pipeline.add_observer(panel_buffer.add)
+        logger.info("Панель аналитика доступна по адресу /ui (обновляется по мере потока)")
     app.include_router(routes.router)
     logger.info(
         "HTTP-сервис обогащения создан",
