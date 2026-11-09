@@ -581,7 +581,52 @@ def apply_settings(app: Any, payload: dict[str, Any]) -> tuple[list[str], list[s
     except (TypeError, ValueError):
         errors.append("размер пачки должен быть целым")
 
+    if applied:
+        persist_settings(merged)
     return applied, errors
+
+
+SETTINGS_FILE = "var/runtime-settings.json"
+
+
+def _settings_path() -> "Path":
+    from pathlib import Path
+
+    candidate = Path.cwd() / SETTINGS_FILE
+    candidate.parent.mkdir(parents=True, exist_ok=True)
+    return candidate
+
+
+def persist_settings(values: dict[str, Any]) -> None:
+    """Сохранить действующие параметры, чтобы пережить перезапуск."""
+    import json
+
+    try:
+        _settings_path().write_text(
+            json.dumps(values, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+    except OSError:
+        pass
+
+
+def restore_settings(app: Any) -> list[str]:
+    """Один раз применить параметры, сохранённые в прошлый раз."""
+    if getattr(app.state, "settings_restored", False):
+        return []
+    app.state.settings_restored = True
+    import json
+
+    path = _settings_path()
+    if not path.exists():
+        return []
+    try:
+        saved = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    if not isinstance(saved, dict):
+        return []
+    applied, _errors = apply_settings(app, saved)
+    return applied
 
 
 def register_panel(app: Any, buffer: EventBuffer) -> bool:
@@ -606,6 +651,7 @@ def register_panel(app: Any, buffer: EventBuffer) -> bool:
 
     @app.get("/ui/config", include_in_schema=False)
     async def panel_config(request: Request) -> Any:
+        restore_settings(request.app)
         return JSONResponse({"settings": SETTINGS_SCHEMA, "values": read_settings(request.app)})
 
     @app.post("/ui/config", include_in_schema=False)
@@ -614,6 +660,7 @@ def register_panel(app: Any, buffer: EventBuffer) -> bool:
             payload = await request.json()
         except Exception:  # noqa: BLE001
             return JSONResponse({"applied": [], "errors": ["некорректный JSON"]}, status_code=400)
+        restore_settings(request.app)
         applied, errors = apply_settings(request.app, payload.get("values", {}))
         return JSONResponse({"applied": applied, "errors": errors,
                              "values": read_settings(request.app)})
