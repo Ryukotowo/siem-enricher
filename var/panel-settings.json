@@ -1,4 +1,4 @@
 {
   "enabled": true,
-  "siem_url_template": "http://localhost:7280/ui/search?indexId=siem-enriched&query=event_id:{event_id}"
+  "siem_url_template": "http://localhost:7280/ui/search?index_id=siem-enriched&query=event_id:{event_id}"
 }
