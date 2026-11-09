@@ -1,11 +1,28 @@
 {
-  "risk.medium": 0.3,
-  "risk.high": 0.6,
-  "risk.critical": 0.85,
-  "policy.mode": "live",
-  "policy.stop_on_block": true,
-  "provenance.max_edges_per_path": 64,
-  "provenance.edge_limit": 120,
-  "ml.cache_size": 4096,
-  "runtime.batch_size": 64
+  "values": {
+    "risk.medium": 0.3,
+    "risk.high": 0.6,
+    "risk.critical": 0.85,
+    "policy.mode": "dry_run",
+    "policy.stop_on_block": true,
+    "provenance.max_edges_per_path": 64,
+    "provenance.edge_limit": 120,
+    "ml.cache_size": 4096,
+    "runtime.batch_size": 64
+  },
+  "rules": {
+    "POL-010": true,
+    "POL-011": true,
+    "POL-012": true,
+    "POL-001": true,
+    "POL-013": true,
+    "POL-002": true,
+    "POL-007": true,
+    "POL-003": true,
+    "POL-004": true,
+    "POL-006": true,
+    "POL-005": true,
+    "POL-008": true,
+    "POL-009": true
+  }
 }

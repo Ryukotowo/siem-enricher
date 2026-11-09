@@ -224,6 +224,9 @@ PANEL_HTML = """<!DOCTYPE html>
     <h2>Параметры эксплуатации</h2>
     <div class="hint">Изменения применяются сразу, без перезапуска. Значения проверяются на допустимый диапазон.</div>
     <div id="settings-fields"></div>
+    <h2 class="sub" style="margin-top:18px;font-size:14px;">Правила политик</h2>
+    <div class="hint">Выключенное правило не участвует в решениях. Изменения применяются сразу.</div>
+    <div id="rules-fields"></div>
     <div class="actions">
       <button class="cancel" id="settings-cancel">отмена</button>
       <button class="save" id="settings-save">применить</button>
@@ -439,6 +442,26 @@ function toggleChain(button) {
   const open = chain.classList.toggle('open');
   button.textContent = open ? 'скрыть цепочку' : 'показать цепочку';
 }
+let SIEM_TEMPLATE = '';
+
+function siemLink(event) {
+  if (!SIEM_TEMPLATE) return '';
+  const url = SIEM_TEMPLATE.replaceAll('{event_id}', encodeURIComponent(event.event_id || ''))
+                            .replaceAll('{file}', encodeURIComponent(event.file || ''));
+  return `<div class="row"><div class="k">в системе SIEM</div>
+    <div class="v"><a href="${url}" target="_blank" rel="noopener">открыть событие в SIEM</a></div></div>`;
+}
+
+async function loadPanelMeta() {
+  try {
+    const response = await fetch('/ui/config', {cache: 'no-store'});
+    if (!response.ok) return;
+    const payload = await response.json();
+    SIEM_TEMPLATE = payload.siem_url_template || '';
+    if (SIEM_TEMPLATE && SELECTED) render();
+  } catch (error) { }
+}
+
 function select(eventId) {
   SELECTED = eventId;
   const event = DATA.find(item => item.event_id === eventId);
@@ -450,6 +473,7 @@ function select(eventId) {
   document.getElementById('detail').querySelector('.head').innerHTML =
     `<h2>${event.file || '—'}</h2><div class="path">${event.path || ''}</div>`;
   document.getElementById('detail-body').innerHTML = `
+    ${siemLink(event)}
     <div class="row"><div class="k">класс конфиденциальности</div>
       <div class="v"><span class="${badgeClass(event.sensitivity)}">${event.sensitivity_ru || event.sensitivity}</span>
       &nbsp;уверенность ${event.confidence ? event.confidence.toFixed(2) : '—'} · метод ${event.method || '—'}</div></div>
@@ -545,6 +569,7 @@ if (pauseButton) {
 
 refresh();
 if (!new URLSearchParams(location.search).has('static')) { connectStream(); } else { setLive('off'); }
+loadPanelMeta();
 setInterval(() => { if (!window.EventSource) refresh(); }, 15000);
 
 const SETTINGS_BOX = document.getElementById('settings');
@@ -588,6 +613,24 @@ async function openSettings() {
     row.appendChild(label); row.appendChild(control);
     SETTINGS_FIELDS.appendChild(row);
   }
+  const rulesBox = document.getElementById('rules-fields');
+  if (rulesBox) {
+    rulesBox.innerHTML = '';
+    for (const rule of (payload.rules || [])) {
+      const row = document.createElement('div');
+      row.className = 'field';
+      row.innerHTML = '<div><div>' + (rule.title || rule.id) + '</div>' +
+                      '<div class="key">' + rule.id + '</div></div>';
+      const control = document.createElement('div');
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.checked = rule.enabled;
+      input.dataset.rule = rule.id;
+      control.appendChild(input);
+      row.appendChild(control);
+      rulesBox.appendChild(row);
+    }
+  }
   SETTINGS_BOX.classList.add('open');
 }
 
@@ -599,10 +642,14 @@ async function saveSettings() {
                               : kind === 'number' ? Number(input.value)
                               : input.value;
   }
+  const rules = {};
+  for (const input of document.querySelectorAll('[data-rule]')) {
+    rules[input.dataset.rule] = input.checked;
+  }
   const response = await fetch('/ui/config', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({values})
+    body: JSON.stringify({values, rules})
   });
   const payload = await response.json();
   if (payload.errors && payload.errors.length) {
@@ -878,6 +925,32 @@ def _pipeline_of(app: Any) -> Any:
     return pipeline
 
 
+def read_rules(app: Any) -> list[dict[str, Any]]:
+    """Список правил политик с их состоянием."""
+    engine = getattr(_pipeline_of(app), "policy_engine", None)
+    rules = getattr(engine, "rules", None) or []
+    return [{"id": rule.id, "title": rule.title or "", "enabled": bool(rule.enabled)}
+            for rule in rules]
+
+
+def apply_rules(app: Any, changes: dict[str, Any]) -> tuple[list[str], list[str]]:
+    """Включить или выключить правила политик на лету."""
+    engine = getattr(_pipeline_of(app), "policy_engine", None)
+    if engine is None:
+        return [], ["движок политик недоступен"]
+    by_id = {rule.id: rule for rule in getattr(engine, "rules", [])}
+    applied: list[str] = []
+    errors: list[str] = []
+    for rule_id, enabled in (changes or {}).items():
+        rule = by_id.get(str(rule_id))
+        if rule is None:
+            errors.append(f"правило {rule_id} не найдено")
+            continue
+        rule.enabled = bool(enabled)
+        applied.append(str(rule_id))
+    return applied, errors
+
+
 def read_settings(app: Any) -> dict[str, Any]:
     """Текущие значения параметров, доступных для изменения через панель."""
     import os
@@ -962,7 +1035,7 @@ def apply_settings(app: Any, payload: dict[str, Any]) -> tuple[list[str], list[s
         errors.append("размер пачки должен быть целым")
 
     if applied:
-        persist_settings(merged)
+        persist_settings(merged, {rule["id"]: rule["enabled"] for rule in read_rules(app)})
     return applied, errors
 
 
@@ -977,13 +1050,14 @@ def _settings_path() -> "Path":
     return candidate
 
 
-def persist_settings(values: dict[str, Any]) -> None:
-    """Сохранить действующие параметры, чтобы пережить перезапуск."""
+def persist_settings(values: dict[str, Any], rules: dict[str, Any] | None = None) -> None:
+    """Сохранить действующие параметры и состояние правил, чтобы пережить перезапуск."""
     import json
 
+    payload = {"values": values, "rules": rules or {}}
     try:
         _settings_path().write_text(
-            json.dumps(values, ensure_ascii=False, indent=2), encoding="utf-8"
+            json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
         )
     except OSError:
         pass
@@ -1005,11 +1079,40 @@ def restore_settings(app: Any) -> list[str]:
         return []
     if not isinstance(saved, dict):
         return []
-    applied, _errors = apply_settings(app, saved)
+    values = saved.get("values") if isinstance(saved.get("values"), dict) else saved
+    applied, _errors = apply_settings(app, values)
+    if isinstance(saved.get("rules"), dict):
+        rule_applied, _rule_errors = apply_rules(app, saved["rules"])
+        applied.extend(rule_applied)
     return applied
 
 
-def register_panel(app: Any, buffer: EventBuffer) -> bool:
+def _panel_setting(app, name, default=None):
+    """Настройка панели: конфиг, переменная окружения или var/panel-settings.json."""
+    import json as _json
+    import os
+    from pathlib import Path as _Path
+
+    config = getattr(app.state, "config", None)
+    section = getattr(config, "panel", None)
+    value = getattr(section, name, None) if section is not None else None
+    if value in (None, ""):
+        value = os.environ.get("SIEM_PANEL_" + name.upper())
+    if value in (None, ""):
+        try:
+            stored = _json.loads((_Path.cwd() / "var" / "panel-settings.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            stored = {}
+        value = stored.get(name)
+    return default if value in (None, "") else value
+
+
+def siem_link_template(app) -> str:
+    """Шаблон ссылки на событие в SIEM (пусто — ссылку не показываем)."""
+    return str(_panel_setting(app, "siem_url_template", "") or "")
+
+
+def register_panel(app, buffer) -> bool:
     """Подключить панель к приложению FastAPI (если он установлен)."""
     try:
         from fastapi import Request
@@ -1060,7 +1163,9 @@ def register_panel(app: Any, buffer: EventBuffer) -> bool:
     @app.get("/ui/config", include_in_schema=False)
     async def panel_config(request: Request) -> Any:
         restore_settings(request.app)
-        return JSONResponse({"settings": SETTINGS_SCHEMA, "values": read_settings(request.app)})
+        return JSONResponse({"settings": SETTINGS_SCHEMA, "values": read_settings(request.app),
+                             "rules": read_rules(request.app),
+                             "siem_url_template": siem_link_template(request.app)})
 
     @app.post("/ui/config", include_in_schema=False)
     async def panel_config_save(request: Request) -> Any:
@@ -1070,8 +1175,14 @@ def register_panel(app: Any, buffer: EventBuffer) -> bool:
             return JSONResponse({"applied": [], "errors": ["некорректный JSON"]}, status_code=400)
         restore_settings(request.app)
         applied, errors = apply_settings(request.app, payload.get("values", {}))
+        rule_changes = payload.get("rules") or {}
+        if rule_changes:
+            rule_applied, rule_errors = apply_rules(request.app, rule_changes)
+            applied.extend(rule_applied)
+            errors.extend(rule_errors)
         return JSONResponse({"applied": applied, "errors": errors,
-                             "values": read_settings(request.app)})
+                             "values": read_settings(request.app),
+                             "rules": read_rules(request.app)})
 
     return True
 
