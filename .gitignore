@@ -59,3 +59,4 @@ pip-unpack-*
 
 # Снимки для отчёта
 var/screens/
+docs/vkr/
