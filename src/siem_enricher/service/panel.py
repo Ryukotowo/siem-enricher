@@ -99,12 +99,52 @@ PANEL_HTML = """<!DOCTYPE html>
   .chain .step { font-size:12px; margin-bottom:6px; color:#2B3442; }
   .chain .step b { color:var(--navy); }
   .chain .step span { color:var(--muted); }
+  .filters { display:flex; gap:10px; align-items:center; flex-wrap:wrap; padding:10px 14px;
+             border-bottom:1px solid var(--line); background:#FCFDFF; }
+  .filters input[type=search] { flex:1 1 260px; min-width:200px; padding:7px 10px; font-size:13px;
+             border:1px solid var(--line); border-radius:8px; }
+  .filters select { padding:7px 8px; font-size:13px; border:1px solid var(--line); border-radius:8px; }
+  .filters .grp { display:flex; gap:4px; }
+  .filters .grp button { border:1px solid var(--line); background:#fff; border-radius:7px;
+             padding:5px 9px; font-size:12px; cursor:pointer; color:#2B3442; }
+  .filters .grp button.on { background:var(--navy); border-color:var(--navy); color:#fff; }
+  .filters .riskbox { display:flex; align-items:center; gap:7px; font-size:12px; color:var(--muted); }
+  .filters .riskbox input { width:98px; }
+  .filters .riskbox b { color:var(--navy); font-size:12px; min-width:26px; }
+  .filters .ghost { border:1px solid var(--line); background:#fff; border-radius:7px; padding:6px 11px;
+             font-size:12px; cursor:pointer; color:#2B3442; }
+  .filters .ghost:hover { border-color:var(--accent); color:var(--accent); }
+  .filters .counter { margin-left:auto; font-size:12px; color:var(--muted); }
+  th[data-sort] { cursor:pointer; user-select:none; }
+  th[data-sort]:hover { color:var(--accent); }
+  th .arrow { font-size:10px; color:var(--accent); }
+  body.dark { background:#111823; }
+  body.dark .card, body.dark header { background:#1B2432; border-color:#2A3546; }
+  body.dark header { background:#0C1424; }
+  body.dark td, body.dark th { border-color:#26303F; color:#DCE3EE; }
+  body.dark th { background:#202B3B; }
+  body.dark tbody tr:hover { background:#22303F; }
+  body.dark tbody tr.sel { background:#243A57; }
+  body.dark .filters { background:#18212E; border-color:#26303F; }
+  body.dark .filters input[type=search], body.dark .filters select, body.dark .filters .grp button,
+  body.dark .filters .ghost { background:#1B2432; color:#DCE3EE; border-color:#2A3546; }
+  body.dark #detail .head { background:#202B3B; border-color:#26303F; }
+  body.dark .path, body.dark .key { color:#8C99AC; }
+  .live { display:inline-flex; align-items:center; gap:7px; font-size:12px; color:#C7D2E5;
+          margin-right:6px; }
+  .live i { width:8px; height:8px; border-radius:50%; background:#3DDC84; display:inline-block;
+            animation:pulse 1.6s infinite; }
+  .live.off i { background:#B3261E; animation:none; }
+  .live.paused i { background:#F0A500; animation:none; }
+  @keyframes pulse { 0%{opacity:.35} 50%{opacity:1} 100%{opacity:.35} }
+  .pending { color:#F0A500; font-size:12px; }
 </style>
 </head>
 <body>
 <header>
   <h1>Обогащение событий SIEM — панель аналитика</h1>
   <div class="stats">
+    <div class="live" id="live"><i></i><span id="live-text">поток</span></div>
     <div><b id="c-total">0</b>событий</div>
     <div><b id="c-crit">0</b>критичных</div>
     <div><b id="c-block">0</b>решений о блокировке</div>
@@ -113,18 +153,33 @@ PANEL_HTML = """<!DOCTYPE html>
 </header>
 <main>
   <section class="card">
-    <div class="toolbar">
-      <button data-filter="all" class="active">все события</button>
-      <button data-filter="block">блокировка</button>
-      <button data-filter="mask">маскирование</button>
-      <button data-filter="high">риск высокий и выше</button>
-      <button data-filter="secret">класс secret</button>
-      <button id="settings-open" class="settings-btn">настройки</button>
+    <div class="filters">
+      <input id="q" type="search" placeholder="поиск: файл, каталог, правило, id события">
+      <div class="grp" id="dec-chips">
+        <button data-dec="block">block</button><button data-dec="mask">mask</button>
+        <button data-dec="tag">tag</button><button data-dec="allow">allow</button>
+      </div>
+      <div class="grp" id="cls-chips">
+        <button data-cls="secret">secret</button><button data-cls="confidential">confidential</button>
+        <button data-cls="internal">internal</button><button data-cls="public">public</button>
+      </div>
+      <select id="action-sel">
+        <option value="">любое действие</option>
+      </select>
+      <label class="riskbox">риск ≥ <input id="risk-min" type="range" min="0" max="1" step="0.05" value="0"><b id="risk-min-v">0.00</b></label>
+      <button class="ghost" id="reset">сбросить</button>
+      <button class="ghost" id="export">CSV</button>
+      <button class="ghost" id="pause">пауза</button>
+      <button class="ghost" id="theme">тема</button>
+      <button id="settings-open">настройки</button>
+      <span class="counter" id="counter"></span>
     </div>
     <table>
       <thead>
-      <tr><th>Время</th><th>Файл</th><th>Действие</th><th>Класс</th><th>Уверенность</th>
-          <th>Риск</th><th>Решение</th><th>Правило</th></tr>
+      <tr><th data-sort="ts">Время</th><th data-sort="file">Файл</th>
+          <th data-sort="action">Действие</th><th data-sort="sensitivity">Класс</th>
+          <th data-sort="confidence">Уверенность</th><th data-sort="risk">Риск</th>
+          <th data-sort="decision">Решение</th><th data-sort="rule">Правило</th></tr>
       </thead>
       <tbody id="rows"></tbody>
     </table>
@@ -148,7 +203,73 @@ PANEL_HTML = """<!DOCTYPE html>
   </div>
 </div>
 <script>
-let DATA = [], FILTER = 'all', SELECTED = null;
+let DATA = [], SELECTED = null;
+let FILTERS = {q: '', decisions: new Set(), classes: new Set(), action: '', riskMin: 0};
+let SORT = {key: 'ts', dir: -1};
+
+function matches(event) {
+  const q = FILTERS.q.trim().toLowerCase();
+  if (q) {
+    const haystack = [event.file, event.directory, (event.rules || []).join(' '),
+                      event.event_id, event.action].join(' ').toLowerCase();
+    if (!haystack.includes(q)) return false;
+  }
+  if (FILTERS.decisions.size && !FILTERS.decisions.has(event.decision)) return false;
+  if (FILTERS.classes.size && !FILTERS.classes.has(event.sensitivity)) return false;
+  if (FILTERS.action && event.action !== FILTERS.action) return false;
+  if ((event.risk || 0) < FILTERS.riskMin) return false;
+  return true;
+}
+
+function sortValue(event, key) {
+  if (key === 'ts') return event.ts || '';
+  if (key === 'rule') return (event.rules || []).join(',');
+  if (key === 'risk') return event.risk || 0;
+  if (key === 'confidence') return event.confidence || 0;
+  if (key === 'sensitivity') return event.sensitivity || '';
+  return (event[key] || '').toString().toLowerCase();
+}
+
+function visibleRows() {
+  const rows = DATA.filter(matches);
+  rows.sort((a, b) => {
+    const left = sortValue(a, SORT.key), right = sortValue(b, SORT.key);
+    if (left === right) return 0;
+    return (left > right ? 1 : -1) * SORT.dir;
+  });
+  return rows;
+}
+
+function refreshActions() {
+  const select = document.getElementById('action-sel');
+  if (!select || select.dataset.filled) return;
+  const actions = Array.from(new Set(DATA.map(e => e.action).filter(Boolean))).sort();
+  for (const action of actions) {
+    const option = document.createElement('option');
+    option.value = action; option.textContent = action;
+    select.appendChild(option);
+  }
+  select.dataset.filled = '1';
+}
+
+function exportCsv() {
+  const rows = visibleRows();
+  const header = ['время', 'файл', 'каталог', 'действие', 'класс', 'уверенность',
+                  'риск', 'уровень', 'решение', 'правила', 'id'];
+  const lines = [header.join(';')];
+  for (const e of rows) {
+    lines.push([e.ts || '', e.file || '', e.directory || '', e.action || '', e.sensitivity || '',
+                e.confidence ?? '', (e.risk || 0).toFixed(2), e.severity || '', e.decision || '',
+                (e.rules || []).join(' '), e.event_id || '']
+               .map(value => String(value).replaceAll(';', ',')).join(';'));
+  }
+  const blob = new Blob([String.fromCharCode(0xFEFF) + lines.join(String.fromCharCode(10))], {type: 'text/csv;charset=utf-8'});
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'siem-events.csv';
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
 
 function badgeClass(level) {
   return 'badge b-' + (level || 'unknown');
@@ -160,24 +281,24 @@ function severityColor(severity) {
   return severity === 'critical' ? '#B3261E' : severity === 'high' ? '#C26A00'
        : severity === 'medium' ? '#1F5FC0' : '#5B6470';
 }
-function matches(event) {
-  if (FILTER === 'all') return true;
-  if (FILTER === 'block' || FILTER === 'mask') return event.decision === FILTER;
-  if (FILTER === 'high') return ['high', 'critical'].includes(event.severity);
-  if (FILTER === 'secret') return event.sensitivity === 'secret';
-  return true;
-}
 function fmt(value) {
   return (value === null || value === undefined) ? '—' : value;
 }
 function render() {
-  const rows = DATA.filter(matches);
+  refreshActions();
+  const rows = visibleRows();
   const body = document.getElementById('rows');
   document.getElementById('empty').style.display = rows.length ? 'none' : 'block';
   document.getElementById('c-total').textContent = DATA.length;
   document.getElementById('c-crit').textContent = DATA.filter(e => e.severity === 'critical').length;
   document.getElementById('c-block').textContent = DATA.filter(e => e.decision === 'block').length;
   document.getElementById('c-fp').textContent = DATA.filter(e => e.sensitivity === 'public').length;
+  const counter = document.getElementById('counter');
+  if (counter) counter.textContent = `показано ${rows.length} из ${DATA.length}`;
+  document.querySelectorAll('th[data-sort]').forEach(th => {
+    const arrow = th.dataset.sort === SORT.key ? (SORT.dir > 0 ? ' ▲' : ' ▼') : '';
+    th.innerHTML = th.textContent.replace(/[ ▲▼]+$/, '') + arrow;
+  });
   body.innerHTML = rows.map((e, index) => {
     const risk = Math.max(0, Math.min(1, e.risk || 0));
     const color = severityColor(e.severity);
@@ -223,7 +344,9 @@ function select(eventId) {
       <span class="${decisionClass(event.decision)}">${event.decision || 'allow'}</span>
       ${(event.rules || []).map(r => `<span class="chip">${r}</span>`).join('')}</div></div>
     <div class="row"><div class="k">происхождение</div>
-      <button class="chain-btn" onclick="toggleChain(this)">показать цепочку (${(event.steps || []).length})</button>
+      <button class="chain-btn" onclick="repeatEvent('${event.event_id}')"
+              title="отправить это событие в сервис ещё раз">повторить</button>
+    <button class="chain-btn" onclick="toggleChain(this)">показать цепочку (${(event.steps || []).length})</button>
       <div class="chain">${
         (event.steps || []).map((step, index) =>
           `<div class="step"><b>${index + 1}. ${step.action || '—'}</b> ${step.endpoint ? '→ ' + step.endpoint : ''}
@@ -260,8 +383,51 @@ document.querySelectorAll('.toolbar button').forEach(button => {
     render();
   });
 });
+let PAUSED = false, PENDING = 0;
+
+function setLive(state) {
+  const box = document.getElementById('live');
+  const text = document.getElementById('live-text');
+  if (!box || !text) return;
+  box.classList.toggle('off', state === 'off');
+  box.classList.toggle('paused', state === 'paused');
+  text.textContent = state === 'live' ? 'поток' : state === 'paused' ? 'пауза' : 'нет связи';
+}
+
+function showPending() {
+  const button = document.getElementById('pause');
+  if (!button) return;
+  button.textContent = PAUSED ? `продолжить${PENDING ? ' (' + PENDING + ')' : ''}` : 'пауза';
+}
+
+function connectStream() {
+  if (!window.EventSource) { setLive('off'); return; }
+  const source = new EventSource('/ui/stream');
+  source.onopen = () => setLive(PAUSED ? 'paused' : 'live');
+  source.onerror = () => setLive('off');
+  source.onmessage = (message) => {
+    let record;
+    try { record = JSON.parse(message.data); } catch (error) { return; }
+    if (PAUSED) { PENDING += 1; showPending(); return; }
+    DATA = [record, ...DATA.filter(item => item.event_id !== record.event_id)].slice(0, 500);
+    if (!SELECTED && record.decision === 'block') select(record.event_id);
+    render();
+  };
+}
+
+const pauseButton = document.getElementById('pause');
+if (pauseButton) {
+  pauseButton.addEventListener('click', () => {
+    PAUSED = !PAUSED;
+    if (!PAUSED) { PENDING = 0; refresh(); }
+    setLive(PAUSED ? 'paused' : 'live');
+    showPending();
+  });
+}
+
 refresh();
-setInterval(refresh, 2000);
+if (!new URLSearchParams(location.search).has('static')) { connectStream(); } else { setLive('off'); }
+setInterval(() => { if (!window.EventSource) refresh(); }, 15000);
 
 const SETTINGS_BOX = document.getElementById('settings');
 const SETTINGS_FIELDS = document.getElementById('settings-fields');
@@ -331,6 +497,91 @@ async function saveSettings() {
 
 document.getElementById('settings-open').addEventListener('click', openSettings);
 if (new URLSearchParams(location.search).has('settings')) { openSettings(); }
+
+const search = document.getElementById('q');
+if (search) {
+  search.addEventListener('input', () => { FILTERS.q = search.value; render(); });
+}
+for (const chip of document.querySelectorAll('#dec-chips button')) {
+  chip.addEventListener('click', () => {
+    const value = chip.dataset.dec;
+    chip.classList.toggle('on');
+    FILTERS.decisions.has(value) ? FILTERS.decisions.delete(value) : FILTERS.decisions.add(value);
+    render();
+  });
+}
+for (const chip of document.querySelectorAll('#cls-chips button')) {
+  chip.addEventListener('click', () => {
+    const value = chip.dataset.cls;
+    chip.classList.toggle('on');
+    FILTERS.classes.has(value) ? FILTERS.classes.delete(value) : FILTERS.classes.add(value);
+    render();
+  });
+}
+const riskRange = document.getElementById('risk-min');
+if (riskRange) {
+  riskRange.addEventListener('input', () => {
+    FILTERS.riskMin = Number(riskRange.value);
+    document.getElementById('risk-min-v').textContent = FILTERS.riskMin.toFixed(2);
+    render();
+  });
+}
+const actionSelect = document.getElementById('action-sel');
+if (actionSelect) {
+  actionSelect.addEventListener('change', () => { FILTERS.action = actionSelect.value; render(); });
+}
+const reset = document.getElementById('reset');
+if (reset) {
+  reset.addEventListener('click', () => {
+    FILTERS = {q: '', decisions: new Set(), classes: new Set(), action: '', riskMin: 0};
+    search.value = '';
+    riskRange.value = '0';
+    document.getElementById('risk-min-v').textContent = '0.00';
+    actionSelect.value = '';
+    document.querySelectorAll('#dec-chips button, #cls-chips button')
+      .forEach(chip => chip.classList.remove('on'));
+    render();
+  });
+}
+async function repeatEvent(eventId) {
+  const event = DATA.find(item => item.event_id === eventId);
+  if (!event) return;
+  const payload = event.raw || {
+    event_id: event.event_id, '@timestamp': event.ts, action: event.action,
+    file: {path: event.path, name: event.file, directory: event.directory}
+  };
+  const result = document.getElementById('repeat-result');
+  try {
+    const response = await fetch('/v1/enrich', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    const document_ = await response.json();
+    if (result) {
+      result.textContent = 'событие отправлено повторно: решение ' + (document_.policy_decision || '—') +
+        ', риск ' + (document_.risk_score ?? 0).toFixed(2);
+    }
+    await loadEvents();
+  } catch (error) {
+    if (result) result.textContent = 'не удалось повторить: ' + error.message;
+  }
+}
+
+const exportBtn = document.getElementById('export');
+if (exportBtn) exportBtn.addEventListener('click', exportCsv);
+const themeBtn = document.getElementById('theme');
+if (themeBtn) {
+  themeBtn.addEventListener('click', () => document.body.classList.toggle('dark'));
+}
+for (const th of document.querySelectorAll('th[data-sort]')) {
+  th.addEventListener('click', () => {
+    const key = th.dataset.sort;
+    SORT = {key, dir: SORT.key === key ? -SORT.dir : -1};
+    render();
+  });
+}
 document.getElementById('settings-cancel').addEventListener('click',
   () => SETTINGS_BOX.classList.remove('open'));
 document.getElementById('settings-save').addEventListener('click', saveSettings);
@@ -420,6 +671,7 @@ def compact(document: dict[str, Any]) -> dict[str, Any]:
         "hash_only": _hash_only(file_info),
         "steps": _chain_steps(document),
         "endpoints": list(_chains_dict(document).get("external_endpoints") or [])[:6],
+        "raw": document.get("raw_event") or None,
     }
 
 
@@ -428,6 +680,11 @@ class EventBuffer:
 
     def __init__(self, size: int = 500) -> None:
         self._items: deque[dict[str, Any]] = deque(maxlen=size)
+        self._subscribers: list[Any] = []
+
+    def subscribe(self, callback: Any) -> None:
+        """Подписать получателя на новые события (SSE-поток панели)."""
+        self._subscribers.append(callback)
 
     def add(self, document: dict[str, Any]) -> None:
         record = compact(document)
@@ -435,6 +692,11 @@ class EventBuffer:
             self._items = deque((i for i in self._items if i.get("event_id") != record["event_id"]),
                                 maxlen=self._items.maxlen)
         self._items.append(record)
+        for callback in list(self._subscribers):
+            try:
+                callback(record)
+            except Exception:  # noqa: BLE001 - подписчик не должен ломать буфер
+                self._subscribers.remove(callback)
 
     def extend(self, documents: Iterable[dict[str, Any]]) -> None:
         for document in documents:
@@ -643,6 +905,34 @@ def register_panel(app: Any, buffer: EventBuffer) -> bool:
     @app.get("/ui", response_class=HTMLResponse, include_in_schema=False)
     async def panel_page() -> Any:
         return HTMLResponse(PANEL_HTML)
+
+    @app.get("/ui/stream", include_in_schema=False)
+    async def panel_stream(request: Request) -> Any:
+        from fastapi.responses import StreamingResponse
+
+        import asyncio
+        import json
+
+        queue: asyncio.Queue = asyncio.Queue(maxsize=500)
+        buffer.subscribe(lambda record: queue.put_nowait(record))
+
+        async def generator() -> Any:
+            try:
+                while True:
+                    if await request.is_disconnected():
+                        break
+                    try:
+                        record = await asyncio.wait_for(queue.get(), timeout=15)
+                    except asyncio.TimeoutError:
+                        yield ": keep-alive\n\n"
+                        continue
+                    yield "data: " + json.dumps(record, ensure_ascii=False) + "\n\n"
+            finally:
+                pass
+
+        return StreamingResponse(generator(), media_type="text/event-stream",
+                                 headers={"Cache-Control": "no-cache",
+                                          "X-Accel-Buffering": "no"})
 
     @app.get("/ui/events", include_in_schema=False)
     async def panel_events(request: Request, limit: int = 200) -> Any:
