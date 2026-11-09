@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 import asyncio
 import time
 from pathlib import Path
@@ -156,19 +158,41 @@ class EnrichmentRuntime:
         if sink is not None:
             await sink.start()
         try:
+            async def process_batch(items: list[Any]) -> None:
+                paths: list[str] = []
+                for item in items:
+                    for file_item in (item.files or []):
+                        path = getattr(file_item, "path", None)
+                        if path:
+                            paths.append(str(path))
+                if paths:
+                    self.pipeline.warm(paths)
+                for item in items:
+                    if limit and self.processed >= limit:
+                        break
+                    enriched = self.pipeline.enrich(item, apply_policies=apply_policies)
+                    document = enriched.siem_document()
+                    if sink is not None and not await sink.send(document):
+                        self.failed += 1
+                    else:
+                        self.processed += 1
+                    if len(collected) < summary_limit:
+                        collected.append(enriched)
+                        if collect_documents:
+                            documents.append(document)
+
+            batch: list[Any] = []
+            batch_size = int(os.environ.get("SIEM_BATCH_SIZE", "64"))
             async for event in source.stream():
-                enriched = self.pipeline.enrich(event, apply_policies=apply_policies)
-                document = enriched.siem_document()
-                if sink is not None and not await sink.send(document):
-                    self.failed += 1
-                else:
-                    self.processed += 1
-                if len(collected) < summary_limit:
-                    collected.append(enriched)
-                    if collect_documents:
-                        documents.append(document)
+                batch.append(event)
+                if len(batch) < batch_size:
+                    continue
+                await process_batch(batch)
+                batch.clear()
                 if limit and self.processed >= limit:
                     break
+            if batch and not (limit and self.processed >= limit):
+                await process_batch(batch)
         finally:
             if sink is not None:
                 await sink.flush()

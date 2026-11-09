@@ -220,6 +220,19 @@ class EnrichmentPipeline:
         enriched = self.enrich(event, apply_policies=apply_policies)
         return event, enriched, enriched.siem_document()
 
+    def warm(self, paths: Iterable[str]) -> None:
+        """Предварительно классифицировать набор путей одним проходом модели."""
+        prepared = [str(path) for path in paths if path]
+        if not prepared:
+            return
+        warm_many = getattr(self.classifier, "predict_many", None)
+        if warm_many is None:
+            return
+        try:
+            warm_many(prepared)
+        except Exception as exc:  # noqa: BLE001 - прогрев не должен ломать обработку
+            logger.warning("Прогрев классификатора не удался", extra={"reason": str(exc)})
+
     def classify(self, path: str) -> SensitivityAssessment:
         """Классифицировать один путь (используется API ``/v1/classify``)."""
         return self.classifier.predict(path)
