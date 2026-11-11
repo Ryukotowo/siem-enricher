@@ -18,6 +18,7 @@ from siem_enricher.provenance.graph import (
     make_node_id,
 )
 from siem_enricher.provenance.store import ProvenanceStore
+from siem_enricher.provenance.summary import ChainSummaries
 
 logger = get_logger("provenance.builder")
 
@@ -49,6 +50,8 @@ class ProvenanceBuilder:
         self.edge_limit = 120
         self.max_edges_per_path = 64
         self._edge_memo: dict[str, list[object]] = {}
+        self.summaries = ChainSummaries()
+        self.use_summaries = True
         self._trim_counter = 0
         self.ttl_seconds = ttl_seconds
         self.external_actions = {str(a).lower() for a in external_actions}
@@ -73,6 +76,7 @@ class ProvenanceBuilder:
             self._edge_epoch += len(graph.edges)
             self._invalidate_touched(event)
             self._trim_history(event)
+            self._update_summaries(graph)
         return graph
 
     def _trim_history(self, event: NormalizedEvent) -> None:
@@ -233,6 +237,42 @@ class ProvenanceBuilder:
                 self._edge_memo.setdefault(node_id, [])
         return list(collected.values())
 
+    def _update_summaries(self, graph: ProvenanceGraph) -> None:
+        """Материализовать новые узлы и рёбра в сводках компонент."""
+        if not self.use_summaries:
+            return
+        for node in graph.nodes.values():
+            self.summaries.add_node(node)
+        for edge in graph.edges:
+            self.summaries.add_edge(edge)
+
+    def chain_from_summary(
+        self,
+        file_path: str,
+        reference: datetime | None = None,
+    ) -> ProvenanceChain | None:
+        """Собрать цепочку из материализованной сводки, без обхода графа."""
+        file_node_id = make_node_id(EntityKind.FILE, file_path)
+        edges = self.summaries.edges_for(file_node_id)
+        if not edges:
+            return None
+
+        moment = reference or utcnow()
+        cutoff = moment - timedelta(seconds=self.ttl_seconds)
+        fresh = [edge for edge in edges if edge.timestamp >= cutoff]
+        if not fresh:
+            return ProvenanceChain(file_path=file_path, steps=[], external_endpoints=[])
+
+        node_ids = sorted({node for edge in fresh for node in (edge.src, edge.dst)})
+        nodes = self.store.get_nodes(node_ids)
+        steps = _dedupe_steps([self._step(edge, file_node_id, nodes, file_path) for edge in fresh])
+        endpoints: list[str] = []
+        for node in nodes.values():
+            if (node.kind in EXTERNAL_KINDS and _is_external_node(node)
+                    and node.label and node.label not in endpoints):
+                endpoints.append(node.label)
+        return ProvenanceChain(file_path=file_path, steps=steps, external_endpoints=endpoints)
+
     def chain_for(
         self,
         file_path: str,
@@ -240,6 +280,12 @@ class ProvenanceBuilder:
         as_of: datetime | None = None,
     ) -> ProvenanceChain:
         """Восстановить цепочку происхождения файла по накопленному графу."""
+        if self.use_summaries and as_of is None:
+            reference = event.timestamp if event is not None else None
+            summary_chain = self.chain_from_summary(file_path, reference)
+            if summary_chain is not None and summary_chain.steps:
+                return summary_chain
+
         cache_key = (str(file_path).strip().lower(), as_of)
         cached = self._chain_cache.get(cache_key)
         if cached is not None and event is None:
@@ -300,6 +346,7 @@ class ProvenanceBuilder:
 
     def prune(self) -> int:
         """Удалить устаревшие записи графа."""
+        self.summaries.clear()
         return self.store.prune(self.ttl_seconds)
 
     @staticmethod

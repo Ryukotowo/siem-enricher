@@ -79,7 +79,7 @@ class ProvenanceTest(unittest.TestCase):
             event_id="evt-read",
         )
         self.builder.record(event)
-        self.store.prune(ttl_seconds=0)  # очищаем граф, чтобы проверить синтетический шаг
+        self.builder.prune()  # очищаем граф, чтобы проверить синтетический шаг
         chain = self.builder.chain_for(HR_FILE, event)
         self.assertEqual(chain.depth, 1)
         self.assertIn("первое наблюдение", chain.steps[0].note)
