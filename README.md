@@ -2,7 +2,7 @@
 
 [![ci](https://github.com/Ryukotowo/siem-enricher/actions/workflows/ci.yml/badge.svg)](https://github.com/Ryukotowo/siem-enricher/actions/workflows/ci.yml)
 ![python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)
-![tests](https://img.shields.io/badge/tests-140-brightgreen)
+![tests](https://img.shields.io/badge/tests-152-brightgreen)
 
 Программное средство для ВКР: сервис, который встраивается в конвейер обработки событий SIEM
 и дополняет каждое событие сведениями, которых в нём нет:
@@ -19,7 +19,7 @@
 ## Качество кода
 
 - `ruff check src tests` — без замечаний; правила в `pyproject.toml`
-- `python -m unittest discover -s tests -t .` — 140 тестов
+- `python -m unittest discover -s tests -t .` — 152 теста
 - CI на GitHub Actions: линтер, тесты на Python 3.11 и 3.12, проверка конфигурации
   при каждом push и pull request
 
@@ -117,7 +117,7 @@ docker compose --profile observability up  # + Prometheus (9090) и Grafana (300
 
 | Проверка | Результат |
 |---|---|
-| Модульные и интеграционные тесты | **121 тест, все проходят** (3 теста модели требуют torch) |
+| Модульные и интеграционные тесты | **152 теста, все проходят** (3 теста модели требуют torch) |
 | Сквозной сценарий `tools/smoke_pipeline.py` | **18 из 18** проверок, с ML и без ML |
 | Классы конфиденциальности на синтетическом потоке | гибрид **0.772** против **0.463** у модели без правил |
 | Категории модели на «родном» датасете | accuracy **0.952**, F1 macro 0.949 (1599 имён) |
@@ -149,7 +149,7 @@ docker compose --profile observability up  # + Prometheus (9090) и Grafana (300
 Реализованы и проверены: конвейер обогащения (извлечение → ML → provenance → риск → политики),
 коннекторы Kafka/файл/webhook (Elasticsearch и Wazuh Indexer — необязательные примеры),
 HTTP API, CLI, метрики Prometheus, журнал аудита, Docker/K8s-развёртывание, ML-контур
-с дообучением и оценкой, 121 тест и сквозной сценарий.
+с дообучением и оценкой, 152 теста и сквозной сценарий.
 
 Проверено: HTTP-слой FastAPI (смоук по всем эндпоинтам, `scripts/http_smoke.ps1`) и стенд
 с открытой SIEM (профиль `siem` в compose: OpenSearch + засев индекса + обогащение потока).
