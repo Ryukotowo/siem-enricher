@@ -1,5 +1,8 @@
 # siem-enricher — сервис обогащения событий SIEM
 
+![ci](https://github.com/Ryukotowo/siem-enricher/actions/workflows/ci.yml/badge.svg)(https://github.com/Ryukotowo/siem-enricher/actions/workflows/ci.yml)
+![python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)
+![tests](https://img.shields.io/badge/tests-140-brightgreen)
 Программное средство для ВКР: сервис, который встраивается в конвейер обработки событий SIEM
 и дополняет каждое событие сведениями, которых в нём нет:
 
@@ -11,6 +14,19 @@
 | `policy_actions` | сработавшие правила и выполненные действия (маскирование, алерт, блокировка) | модуль политик |
 
 Обогащённые события возвращаются в SIEM (Kafka) для корреляции и реагирования.
+
+## Качество кода
+
+- `ruff check src tests` — без замечаний; правила в `pyproject.toml`
+- `python -m unittest discover -s tests -t .` — 140 тестов
+- CI на GitHub Actions: линтер, тесты на Python 3.11 и 3.12, проверка конфигурации
+  при каждом push и pull request
+
+```bash
+pip install -e .
+ruff check src tests
+python -m unittest discover -s tests -t .
+```
 
 ## Состав (7 модулей)
 
