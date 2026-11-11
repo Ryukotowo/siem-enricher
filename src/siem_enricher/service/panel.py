@@ -1048,6 +1048,14 @@ def _audit(app: Any, record: dict[str, Any]) -> None:
     payload.setdefault("kind", "config_change")
     payload.setdefault("actor", getattr(app.state, "audit_actor", "panel"))
     try:
+        from siem_enricher.metrics import service_metrics
+
+        service_metrics().config_changes.inc(
+            {"key": str(record.get("key") or record.get("rule") or "unknown")}
+        )
+    except Exception:  # noqa: BLE001
+        pass
+    try:
         logger.write(payload)
         logger.flush()
     except Exception:  # noqa: BLE001 - аудит не должен ломать изменения
@@ -1113,6 +1121,12 @@ def save_label(app: Any, payload: dict[str, Any]) -> tuple[dict[str, Any] | None
         "actor": str(getattr(app.state, "audit_actor", "analyst")),
         "ts": datetime.now(tz=UTC).isoformat().replace("+00:00", "Z"),
     }
+    try:
+        from siem_enricher.metrics import service_metrics
+
+        service_metrics().analyst_labels.inc({"label": label})
+    except Exception:  # noqa: BLE001
+        pass
     with _labels_path().open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(record, ensure_ascii=False) + "\n")
     return record, []

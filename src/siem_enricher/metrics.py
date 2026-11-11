@@ -317,6 +317,33 @@ class ServiceMetrics:
             "siem_enricher_queue_size",
             "Текущий размер очереди необработанных событий",
         )
+        self.decisions = r.counter(
+            "siem_enricher_policy_decisions_total",
+            "Решения политик по событиям",
+            ("decision",),
+        )
+        self.config_changes = r.counter(
+            "siem_enricher_config_changes_total",
+            "Изменения настроек и правил через панель",
+            ("key",),
+        )
+        self.analyst_labels = r.counter(
+            "siem_enricher_analyst_labels_total",
+            "Оценки аналитиков по событиям",
+            ("label",),
+        )
+        self.cache_hits = r.gauge(
+            "siem_enricher_classifier_cache_hits",
+            "Попадания в кэш классификации",
+        )
+        self.cache_misses = r.gauge(
+            "siem_enricher_classifier_cache_misses",
+            "Промахи кэша классификации",
+        )
+        self.cache_entries = r.gauge(
+            "siem_enricher_classifier_cache_entries",
+            "Число записей в кэше классификации",
+        )
 
 
 REGISTRY = MetricsRegistry()

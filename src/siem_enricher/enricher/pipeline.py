@@ -195,6 +195,7 @@ class EnrichmentPipeline:
 
             self.metrics.enrichment_duration.observe(result.duration_ms / 1000.0)
             self.metrics.events_enriched.inc({"status": "ok"})
+            self.metrics.decisions.inc({"decision": result.policy_decision.value})
             logger.info(
                 "Событие обогащено",
                 extra={

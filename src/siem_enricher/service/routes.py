@@ -54,8 +54,18 @@ async def readyz(request: Request) -> Response:
 
 
 @router.get("/metrics", summary="Метрики Prometheus")
-async def metrics() -> Response:
-    return Response(content=render_prometheus(), media_type="text/plain; version=0.0.4; charset=utf-8")
+async def metrics(request: Request) -> Response:
+    from siem_enricher.metrics import service_metrics
+
+    pipeline = getattr(getattr(request.app.state, "runtime", None), "pipeline", None)
+    classifier = getattr(pipeline, "classifier", None)
+    if classifier is not None and hasattr(classifier, "hits"):
+        counters = service_metrics()
+        counters.cache_hits.set(float(classifier.hits))
+        counters.cache_misses.set(float(classifier.misses))
+        counters.cache_entries.set(float(len(getattr(classifier, "_cache", {}))))
+    return Response(content=render_prometheus(),
+                    media_type="text/plain; version=0.0.4; charset=utf-8")
 
 
 @router.get("/v1/version", summary="Версия и состав конвейера")
