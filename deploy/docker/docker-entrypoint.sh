@@ -13,8 +13,11 @@ echo "[entrypoint] mode=${ENRICHER_MODE} config=${CONFIG} python=$(python --vers
 
 case "$ENRICHER_MODE" in
   serve)
+    # RUN_PIPELINE=1 поднимает сервис вместе с чтением потока источника
+    PIPELINE_FLAG=""
+    if [ "${RUN_PIPELINE:-0}" = "1" ]; then PIPELINE_FLAG="--run-pipeline"; fi
     exec python -m siem_enricher serve --config "$CONFIG" \
-      --host "${HTTP_HOST:-0.0.0.0}" --port "${HTTP_PORT:-8080}"
+      --host "${HTTP_HOST:-0.0.0.0}" --port "${HTTP_PORT:-8080}" $PIPELINE_FLAG
     ;;
   run)
     exec python -m siem_enricher run --config "$CONFIG"

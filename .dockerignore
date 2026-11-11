@@ -1,0 +1,25 @@
+.git
+.gitignore
+.venv
+venv
+__pycache__
+*.pyc
+*.pyo
+
+# данные и веса модели монтируются в контейнер, в образ не попадают
+var
+ml/artifacts
+*.db
+*.db-shm
+*.db-wal
+*.jsonl
+*.log
+
+# документация и служебные файлы
+docs
+vkr
+deploy/monitoring
+docker-compose.yml
+docker-compose.yml.bak
+*.md
+!README.md

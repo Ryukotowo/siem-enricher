@@ -11,7 +11,9 @@
     "type": "kafka",
     "options": {
       "bootstrap_servers": "${KAFKA_BOOTSTRAP:-kafka:9092}",
-      "topics": ["${KAFKA_INPUT_TOPIC:-siem.raw.events}"],
+      "topics": [
+        "${KAFKA_INPUT_TOPIC:-siem.raw.events}"
+      ],
       "group_id": "${KAFKA_CONSUMER_GROUP:-siem-enricher}",
       "auto_offset_reset": "earliest",
       "poll_timeout_ms": 1000
@@ -31,7 +33,10 @@
         },
         {
           "type": "file_jsonl",
-          "options": { "path": "/app/var/enriched_events.jsonl", "mode": "append" }
+          "options": {
+            "path": "/app/var/enriched_events.jsonl",
+            "mode": "append"
+          }
         },
         {
           "type": "webhook",
@@ -48,7 +53,11 @@
     "max_files_per_event": 32,
     "max_users_per_event": 8,
     "drop_system_paths": false,
-    "system_path_prefixes": ["c:\\windows\\", "/proc/", "/sys/"],
+    "system_path_prefixes": [
+      "c:\\windows\\",
+      "/proc/",
+      "/sys/"
+    ],
     "aliases": {},
     "scan_embedded_paths": true,
     "max_embedded_paths": 8
@@ -81,10 +90,19 @@
     "redis_url": "${REDIS_URL:-redis://redis:6379/0}",
     "ttl_seconds": 604800,
     "max_chain_depth": 16,
-    "external_actions": ["upload", "send", "post", "webhook"]
+    "external_actions": [
+      "upload",
+      "send",
+      "post",
+      "webhook"
+    ]
   },
   "risk": {
-    "thresholds": { "medium": 0.3, "high": 0.6, "critical": 0.85 },
+    "thresholds": {
+      "medium": 0.3,
+      "high": 0.6,
+      "critical": 0.85
+    },
     "weights": {
       "sensitivity": 0.45,
       "confidence": 0.15,
