@@ -1,6 +1,6 @@
 # siem-enricher — сервис обогащения событий SIEM
 
-![ci](https://github.com/Ryukotowo/siem-enricher/actions/workflows/ci.yml/badge.svg)(https://github.com/Ryukotowo/siem-enricher/actions/workflows/ci.yml)
+![ci](https://github.com/Ryukotowo/siem-enricher/actions/workflows/ci.yml/badge.svg)](https://github.com/Ryukotowo/siem-enricher/actions/workflows/ci.yml)
 ![python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)
 ![tests](https://img.shields.io/badge/tests-140-brightgreen)
 Программное средство для ВКР: сервис, который встраивается в конвейер обработки событий SIEM
