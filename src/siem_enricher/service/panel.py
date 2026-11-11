@@ -80,6 +80,11 @@ PANEL_HTML = """<!DOCTYPE html>
   #settings .save { background:var(--accent); color:#fff; border:1px solid var(--accent); }
   #settings .cancel { background:#fff; color:#2B3442; border:1px solid var(--line); }
   #settings .result { font-size:12px; color:var(--muted); margin-top:10px; }
+  .audit { font-size:12px; color:#2B3442; max-height:150px; overflow:auto; }
+  .audit .item { padding:5px 0; border-bottom:1px solid #EEF1F6; display:flex;
+                 justify-content:space-between; gap:10px; }
+  .audit .item span { color:var(--muted); white-space:nowrap; }
+  body.dark .audit { color:#DCE3EE; }
   #detail { padding:0; }
   #detail .head { padding:14px 16px; border-bottom:1px solid var(--line); background:#FAFBFD; }
   #detail .head h2 { margin:0 0 4px; font-size:15px; }
@@ -228,6 +233,8 @@ PANEL_HTML = """<!DOCTYPE html>
     <h2 class="sub" style="margin-top:18px;font-size:14px;">Правила политик</h2>
     <div class="hint">Выключенное правило не участвует в решениях. Изменения применяются сразу.</div>
     <div id="rules-fields"></div>
+    <h2 class="sub" style="margin-top:18px;font-size:14px;">Последние изменения</h2>
+    <div id="audit-list" class="audit"></div>
     <div class="actions">
       <button class="cancel" id="settings-cancel">отмена</button>
       <button class="save" id="settings-save">применить</button>
@@ -632,6 +639,27 @@ async function openSettings() {
       rulesBox.appendChild(row);
     }
   }
+  const auditBox = document.getElementById('audit-list');
+  if (auditBox) {
+    auditBox.innerHTML = '';
+    try {
+      const response = await fetch('/ui/audit?limit=20', {cache: 'no-store'});
+      const payload = await response.json();
+      for (const item of (payload.records || [])) {
+        const row = document.createElement('div');
+        row.className = 'item';
+        const name = item.rule ? ('правило ' + item.rule) : (item.key || 'изменение');
+        const when = (item.audit_ts || '').slice(11, 19);
+        row.innerHTML = '<div>' + name + ': ' + String(item.from) + ' → ' + String(item.to) +
+                        ' <span>(' + (item.actor || '—') + ')</span></div>' +
+                        '<span>' + when + '</span>';
+        auditBox.appendChild(row);
+      }
+      if (!(payload.records || []).length) {
+        auditBox.innerHTML = '<div class="item">изменений пока нет</div>';
+      }
+    } catch (error) { auditBox.innerHTML = '<div class="item">журнал недоступен</div>'; }
+  }
   SETTINGS_BOX.classList.add('open');
 }
 
@@ -934,6 +962,58 @@ def read_rules(app: Any) -> list[dict[str, Any]]:
             for rule in rules]
 
 
+def _audit_logger(app: Any):
+    """Логгер аудита, привязанный к пути из конфигурации."""
+    from siem_enricher.audit import AuditLogger
+
+    config = getattr(app.state, "config", None)
+    path = getattr(config, "audit_log_path", None)
+    if path is None:
+        return None
+    logger = getattr(app.state, "config_audit", None)
+    if logger is None or logger.path != path:
+        logger = AuditLogger(path)
+        app.state.config_audit = logger
+    return logger
+
+
+def _audit(app: Any, record: dict[str, Any]) -> None:
+    """Записать изменение конфигурации в журнал аудита."""
+    logger = _audit_logger(app)
+    if logger is None:
+        return
+    payload = dict(record)
+    payload.setdefault("kind", "config_change")
+    payload.setdefault("actor", getattr(app.state, "audit_actor", "panel"))
+    try:
+        logger.write(payload)
+        logger.flush()
+    except Exception:  # noqa: BLE001 - аудит не должен ломать изменения
+        pass
+
+
+def read_audit_tail(app: Any, limit: int = 40) -> list[dict[str, Any]]:
+    """Последние изменения конфигурации из журнала."""
+    import json
+    from pathlib import Path as _Path
+
+    config = getattr(app.state, "config", None)
+    path = getattr(config, "audit_log_path", None)
+    if path is None or not _Path(path).exists():
+        return []
+    records: list[dict[str, Any]] = []
+    for line in _Path(path).read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            item = json.loads(line)
+        except ValueError:
+            continue
+        if str(item.get("kind", "")).endswith("change"):
+            records.append(item)
+    return records[-limit:][::-1]
+
+
 def apply_rules(app: Any, changes: dict[str, Any]) -> tuple[list[str], list[str]]:
     """Включить или выключить правила политик на лету."""
     engine = getattr(_pipeline_of(app), "policy_engine", None)
@@ -947,8 +1027,12 @@ def apply_rules(app: Any, changes: dict[str, Any]) -> tuple[list[str], list[str]
         if rule is None:
             errors.append(f"правило {rule_id} не найдено")
             continue
+        previous = bool(rule.enabled)
         rule.enabled = bool(enabled)
         applied.append(str(rule_id))
+        if previous != rule.enabled:
+            _audit(app, {"kind": "policy_rule_change", "rule": str(rule_id),
+                         "from": previous, "to": rule.enabled})
     return applied, errors
 
 
@@ -1037,6 +1121,10 @@ def apply_settings(app: Any, payload: dict[str, Any]) -> tuple[list[str], list[s
 
     if applied:
         persist_settings(merged, {rule["id"]: rule["enabled"] for rule in read_rules(app)})
+        for key in merged:
+            if key in current and str(current[key]) != str(merged[key]):
+                _audit(app, {"kind": "config_change", "key": key,
+                             "from": current[key], "to": merged[key]})
     return applied, errors
 
 
@@ -1161,8 +1249,14 @@ def register_panel(app, buffer) -> bool:
         store: EventBuffer = request.app.state.panel_buffer
         return JSONResponse({"events": store.recent(limit), "stats": store.stats()})
 
+    @app.get("/ui/audit", include_in_schema=False)
+    async def panel_audit(request: Request, limit: int = 40) -> Any:
+        return JSONResponse({"records": read_audit_tail(request.app, limit)})
+
     @app.get("/ui/config", include_in_schema=False)
     async def panel_config(request: Request) -> Any:
+        request.app.state.audit_actor = (request.headers.get("X-Analyst")
+                                        or getattr(request.client, "host", "panel"))
         restore_settings(request.app)
         return JSONResponse({"settings": SETTINGS_SCHEMA, "values": read_settings(request.app),
                              "rules": read_rules(request.app),
@@ -1175,6 +1269,8 @@ def register_panel(app, buffer) -> bool:
         except Exception:  # noqa: BLE001
             return JSONResponse({"applied": [], "errors": ["некорректный JSON"]}, status_code=400)
         restore_settings(request.app)
+        request.app.state.audit_actor = (request.headers.get("X-Analyst")
+                                        or getattr(request.client, "host", "panel"))
         applied, errors = apply_settings(request.app, payload.get("values", {}))
         rule_changes = payload.get("rules") or {}
         if rule_changes:
