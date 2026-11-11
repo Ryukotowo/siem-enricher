@@ -20,7 +20,7 @@ from siem_enricher.ml.fallback_rules import (
     KeywordRule,
 )
 from siem_enricher.ml.features import FEATURE_NAMES, extract_features, features_to_vector
-from siem_enricher.ml.hybrid import HybridSettings, HybridSensitivityClassifier
+from siem_enricher.ml.hybrid import HybridSensitivityClassifier, HybridSettings
 from siem_enricher.ml.transformer_classifier import (
     TransformerSensitivityClassifier,
     checkpoint_info,

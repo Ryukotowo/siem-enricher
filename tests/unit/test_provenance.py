@@ -4,17 +4,17 @@ from __future__ import annotations
 
 import tempfile
 import unittest
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from siem_enricher.config import ProvenanceConfig
 from siem_enricher.models import (
     FileRef,
     NormalizedEvent,
+    ProcessInfo,
     ProvenanceAction,
     RemoteEndpoint,
     UserInfo,
-    ProcessInfo,
 )
 from siem_enricher.provenance import (
     InMemoryProvenanceStore,
@@ -23,7 +23,7 @@ from siem_enricher.provenance import (
     build_store,
 )
 
-BASE_TIME = datetime(2025, 3, 3, 9, 0, tzinfo=timezone.utc)
+BASE_TIME = datetime(2025, 3, 3, 9, 0, tzinfo=UTC)
 HR_FILE = r"C:\HR\Зарплатная_ведомость_2025.xlsx"
 USB_FILE = r"E:\Копия_Зарплатная_ведомость_2025.xlsx"
 
@@ -134,7 +134,7 @@ class ProvenanceTest(unittest.TestCase):
             files=[(HR_FILE, ProvenanceAction.READ)], event_id="evt-old",
         )
         # Сдвигаем событие в прошлое относительно текущего момента
-        old_event.timestamp = datetime.now(tz=timezone.utc) - timedelta(days=30)
+        old_event.timestamp = datetime.now(tz=UTC) - timedelta(days=30)
         self.builder.record(old_event)
 
         self.assertEqual(self.builder.chain_for(HR_FILE).depth, 0)

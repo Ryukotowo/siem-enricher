@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Iterator, Mapping, Sequence
+from typing import Any
 
 _PATH_TOKEN_RE = re.compile(r"([^.\[\]]+)|\[(\*|\d+)\]")
 

@@ -5,14 +5,15 @@ from __future__ import annotations
 import hashlib
 import hmac
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
-from typing import Any, Mapping, Sequence
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
+from typing import Any
 
 from siem_enricher.audit import AuditLogger
 from siem_enricher.logging_setup import get_logger
 from siem_enricher.metrics import ServiceMetrics
-from siem_enricher.models.enums import ActionStatus, ActionType
 from siem_enricher.models.enrichment import ActionOutcome
+from siem_enricher.models.enums import ActionStatus, ActionType
 from siem_enricher.policy.blockers import BlockExecutor, DryRunBlocker
 from siem_enricher.policy.fields import iter_targets
 from siem_enricher.policy.rules import ActionSpec

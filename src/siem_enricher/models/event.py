@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Mapping
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import PurePosixPath, PureWindowsPath
-from typing import Any, Mapping
+from typing import Any
 
 from siem_enricher.models.enums import ProvenanceAction
 
@@ -15,18 +16,18 @@ _WINDOWS_HINT_CHARS = ("\\", ":\\")
 
 def utcnow() -> datetime:
     """Текущее время в UTC с часовым поясом."""
-    return datetime.now(tz=timezone.utc)
+    return datetime.now(tz=UTC)
 
 
 def parse_timestamp(value: Any, default: datetime | None = None) -> datetime:
     """Разобрать отметку времени из строки (ISO 8601), числа (epoch) или даты."""
     if isinstance(value, datetime):
-        return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+        return value if value.tzinfo else value.replace(tzinfo=UTC)
     if isinstance(value, (int, float)):
         seconds = float(value)
         if seconds > 1e11:  # миллисекунды
             seconds /= 1000.0
-        return datetime.fromtimestamp(seconds, tz=timezone.utc)
+        return datetime.fromtimestamp(seconds, tz=UTC)
     if isinstance(value, str) and value.strip():
         text = value.strip()
         if text.endswith("Z"):
@@ -43,7 +44,7 @@ def parse_timestamp(value: Any, default: datetime | None = None) -> datetime:
                     continue
             else:
                 return default or utcnow()
-        return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+        return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
     return default or utcnow()
 
 
@@ -52,8 +53,8 @@ def isoformat(value: datetime | None) -> str | None:
     if value is None:
         return None
     if value.tzinfo is None:
-        value = value.replace(tzinfo=timezone.utc)
-    return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+        value = value.replace(tzinfo=UTC)
+    return value.astimezone(UTC).isoformat().replace("+00:00", "Z")
 
 
 def split_path(path: str) -> tuple[str, str, str]:

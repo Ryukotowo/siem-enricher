@@ -3,15 +3,16 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import replace
-from typing import Callable, Any, Mapping, Sequence
+from typing import Any
 
 from siem_enricher.config import AppConfig
+from siem_enricher.enricher.risk import RiskScorer
 from siem_enricher.extractor import MetadataExtractor
 from siem_enricher.logging_setup import event_context, get_logger
-from siem_enricher.ml import SensitivityClassifier, aggregate_level, build_classifier, load_label_weights
 from siem_enricher.metrics import ServiceMetrics, service_metrics
-from siem_enricher.models.enums import PolicyDecision, SensitivityLevel
+from siem_enricher.ml import SensitivityClassifier, aggregate_level, build_classifier, load_label_weights
 from siem_enricher.models.enrichment import (
     EnrichedEvent,
     EnrichmentResult,
@@ -19,10 +20,10 @@ from siem_enricher.models.enrichment import (
     ProvenanceChain,
     SensitivityAssessment,
 )
+from siem_enricher.models.enums import PolicyDecision, SensitivityLevel
 from siem_enricher.models.event import NormalizedEvent, utcnow
 from siem_enricher.policy import PolicyEngine
 from siem_enricher.provenance import ProvenanceBuilder, ProvenanceStore, build_store
-from siem_enricher.enricher.risk import RiskScorer
 from siem_enricher.version import ENRICHMENT_SCHEMA_VERSION, VERSION
 
 logger = get_logger("enricher.pipeline")

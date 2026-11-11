@@ -8,12 +8,12 @@ import unittest
 from pathlib import Path
 from typing import Any
 
-from tests import PROJECT_ROOT
+from tools.generate_sample_events import build_events
 
 from siem_enricher.config import AppConfig, MlConfig, load_structured
 from siem_enricher.enricher import EnrichmentPipeline
 from siem_enricher.metrics import reset_metrics, service_metrics
-from tools.generate_sample_events import build_events
+from tests import PROJECT_ROOT
 
 CHECKPOINT = PROJECT_ROOT / "ml" / "artifacts" / "sensitivity_transformer"
 HAS_TORCH = (
@@ -82,7 +82,7 @@ class PipelineEndToEndTest(unittest.TestCase):
     # --- проверки ---
     def test_all_events_are_enriched(self) -> None:
         self.assertGreaterEqual(len(self.results), 10)
-        for enriched, document in self.results:
+        for _enriched, document in self.results:
             self.assertIsNotNone(document.get("data_sensitivity"))
             self.assertIn("risk_score", document)
             self.assertIn("provenance_chain", document)

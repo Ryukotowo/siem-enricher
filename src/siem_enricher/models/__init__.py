@@ -1,14 +1,5 @@
 """Модели данных сервиса обогащения событий SIEM."""
 
-from siem_enricher.models.enums import (
-    ActionStatus,
-    ActionType,
-    EntityKind,
-    PolicyDecision,
-    ProvenanceAction,
-    SensitivityLevel,
-    Severity,
-)
 from siem_enricher.models.enrichment import (
     ActionOutcome,
     EnrichedEvent,
@@ -18,6 +9,15 @@ from siem_enricher.models.enrichment import (
     ProvenanceStep,
     RiskAssessment,
     SensitivityAssessment,
+)
+from siem_enricher.models.enums import (
+    ActionStatus,
+    ActionType,
+    EntityKind,
+    PolicyDecision,
+    ProvenanceAction,
+    SensitivityLevel,
+    Severity,
 )
 from siem_enricher.models.event import (
     FileRef,

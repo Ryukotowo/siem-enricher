@@ -7,14 +7,15 @@ import asyncio
 import json
 import signal
 import sys
+from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import Any, Callable, Sequence
+from typing import Any
 
 from siem_enricher.config import AppConfig, ConfigError, load_config
 from siem_enricher.connectors import available_sinks, available_sources
 from siem_enricher.logging_setup import get_logger, setup_logging
 from siem_enricher.ml import build_classifier, load_label_weights
-from siem_enricher.policy import PolicyEngine, load_rules, validate_rules
+from siem_enricher.policy import load_rules, validate_rules
 from siem_enricher.provenance import ProvenanceBuilder, build_store
 from siem_enricher.service.runtime import EnrichmentRuntime, build_runtime
 from siem_enricher.version import ENRICHMENT_SCHEMA_VERSION, VERSION

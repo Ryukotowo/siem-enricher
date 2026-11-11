@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, replace
-from typing import Iterable, Sequence
 
 from siem_enricher.ml.base import SensitivityClassifier
 from siem_enricher.ml.features import extract_features, feature_importance_hint
-from siem_enricher.models.enums import SensitivityLevel
 from siem_enricher.models.enrichment import SensitivityAssessment
+from siem_enricher.models.enums import SensitivityLevel
 
 
 @dataclass(frozen=True, slots=True)
@@ -222,8 +222,8 @@ class HeuristicSensitivityClassifier(SensitivityClassifier):
         name = (path or "").replace("/", "\\").rsplit("\\", 1)[-1]
         extension = _extension_of(name)
 
-        scores: dict[SensitivityLevel, float] = {level: 0.0 for level in SensitivityLevel.labels()}
-        policy_scores: dict[SensitivityLevel, float] = {level: 0.0 for level in SensitivityLevel.labels()}
+        scores: dict[SensitivityLevel, float] = dict.fromkeys(SensitivityLevel.labels(), 0.0)
+        policy_scores: dict[SensitivityLevel, float] = dict.fromkeys(SensitivityLevel.labels(), 0.0)
         evidence: list[str] = []
 
         if name.lower() in CREDENTIAL_FILENAMES:

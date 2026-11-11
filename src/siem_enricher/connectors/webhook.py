@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 from siem_enricher.connectors.base import SinkConnector, register_sink
 from siem_enricher.logging_setup import get_logger

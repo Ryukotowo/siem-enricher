@@ -5,8 +5,9 @@ from __future__ import annotations
 import asyncio
 import json
 import sys
+from collections.abc import AsyncIterator, Mapping, Sequence
 from pathlib import Path
-from typing import Any, AsyncIterator, Iterator, Mapping, Sequence
+from typing import Any
 
 from siem_enricher.connectors.base import (
     SinkConnector,

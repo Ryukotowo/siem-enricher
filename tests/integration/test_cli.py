@@ -7,11 +7,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tests import PROJECT_ROOT
-from tests.integration.test_pipeline_end_to_end import build_config_dict
+from tools.generate_sample_events import build_events
 
 from siem_enricher import cli
-from tools.generate_sample_events import build_events
+from tests import PROJECT_ROOT
+from tests.integration.test_pipeline_end_to_end import build_config_dict
 
 
 class CommandLineTest(unittest.TestCase):

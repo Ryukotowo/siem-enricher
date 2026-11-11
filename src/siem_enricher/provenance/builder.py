@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
 from collections import OrderedDict
-from typing import Iterable, Sequence
+from collections.abc import Iterable, Sequence
+from datetime import datetime, timedelta
 
 from siem_enricher.config import ProvenanceConfig
 from siem_enricher.logging_setup import get_logger
-from siem_enricher.models.enums import EntityKind, ProvenanceAction
 from siem_enricher.models.enrichment import ProvenanceChain, ProvenanceStep
+from siem_enricher.models.enums import EntityKind, ProvenanceAction
 from siem_enricher.models.event import NormalizedEvent, utcnow
 from siem_enricher.provenance.graph import (
     ProvenanceEdge,

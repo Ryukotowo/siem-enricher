@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Iterable, Mapping, Sequence
 
 from siem_enricher.config import RiskConfig
-from siem_enricher.models.enums import ProvenanceAction, SensitivityLevel, Severity
 from siem_enricher.models.enrichment import ProvenanceChain, RiskAssessment, SensitivityAssessment
+from siem_enricher.models.enums import ProvenanceAction, SensitivityLevel, Severity
 from siem_enricher.models.event import NormalizedEvent
 
 #: Пороги по умолчанию (совпадают с config/config.example.json)

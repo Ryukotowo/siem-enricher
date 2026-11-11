@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import ipaddress
 import re
-from typing import Iterable, Iterator
+from collections.abc import Iterable, Iterator
 
 WINDOWS_PATH_RE = re.compile(r"[A-Za-z]:\\(?:[^\\/:*?\"<>|\r\n]+\\)*[^\\/:*?\"<>|\r\n]{0,180}")
 UNC_PATH_RE = re.compile(r"\\\\[A-Za-z0-9._-]{1,64}\\[^\r\n\t\"'<>|]{1,180}")
@@ -115,9 +115,7 @@ def looks_like_path(value: str) -> bool:
         return True
     if value.startswith("\\\\"):
         return True
-    if value.startswith("/") and value.count("/") >= 1 and " " not in value:
-        return True
-    return False
+    return value.startswith("/") and value.count("/") >= 1 and " " not in value
 
 
 #: Хвост вида ``" E"`` — начало следующего пути (``file.xlsx E:\other.xlsx``)

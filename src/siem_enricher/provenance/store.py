@@ -6,9 +6,10 @@ import json
 import sqlite3
 import threading
 from abc import ABC, abstractmethod
+from collections.abc import Iterable, Sequence
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Iterable, Sequence
+from typing import Any
 
 from siem_enricher.config import ProvenanceConfig
 from siem_enricher.logging_setup import get_logger

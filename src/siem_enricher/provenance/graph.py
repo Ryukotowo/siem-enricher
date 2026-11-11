@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Iterable, Mapping
+from typing import Any
 
 from siem_enricher.models.enums import EntityKind, ProvenanceAction
 from siem_enricher.models.event import isoformat, parse_timestamp, utcnow

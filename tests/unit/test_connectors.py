@@ -8,9 +8,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from siem_enricher.config import ConnectorConfig
 from siem_enricher.connectors import available_sinks, available_sources, build_sink, build_source
 from siem_enricher.connectors.file_replay import FileJsonlSink, FileReplaySource
-from siem_enricher.config import ConnectorConfig
 from siem_enricher.models.enums import ProvenanceAction
 
 EVENT_READ = {

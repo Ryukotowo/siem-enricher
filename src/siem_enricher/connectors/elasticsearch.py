@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone
-from typing import Any, AsyncIterator, Mapping
+from collections.abc import AsyncIterator, Mapping
+from datetime import UTC, datetime
+from typing import Any
 
 from siem_enricher.connectors.base import (
     SinkConnector,
@@ -56,7 +57,7 @@ def _create_client(options: Mapping[str, Any]):
         from opensearchpy import AsyncOpenSearch
     except ImportError:
         try:
-            from elasticsearch import AsyncElasticsearch
+            from elasticsearch import AsyncElasticsearch  # noqa: F401  # noqa: F401
         except ImportError as exc:
             raise RuntimeError(INSTALL_HINT) from exc
         return AsyncElasticsearch(**client_options)
@@ -96,7 +97,7 @@ class ElasticsearchSource(SourceConnector):
 
     async def start(self) -> None:
         try:
-            from elasticsearch import AsyncElasticsearch
+            from elasticsearch import AsyncElasticsearch  # noqa: F401
         except ImportError as exc:  # pragma: no cover - зависит от окружения
             raise RuntimeError(INSTALL_HINT) from exc
         self._client = _create_client(self.options)
@@ -124,7 +125,7 @@ class ElasticsearchSource(SourceConnector):
             await self.start()
         search_after = self.checkpoint.get(self.checkpoint_key)
         if search_after is None and self.from_now:
-            start = datetime.now(tz=timezone.utc).isoformat().replace("+00:00", "Z")
+            start = datetime.now(tz=UTC).isoformat().replace("+00:00", "Z")
             cursor_filter: dict[str, Any] = {self.timestamp_field: {"gte": start}}
         elif isinstance(search_after, list):
             cursor_filter = {}
@@ -199,14 +200,14 @@ class ElasticsearchSink(SinkConnector):
 
     async def start(self) -> None:
         try:
-            from elasticsearch import AsyncElasticsearch
+            from elasticsearch import AsyncElasticsearch  # noqa: F401
         except ImportError as exc:  # pragma: no cover
             raise RuntimeError(INSTALL_HINT) from exc
         self._client = _create_client(self.options)
         self._started = True
 
     def _index_name(self) -> str:
-        return datetime.now(tz=timezone.utc).strftime(self.index) if "%" in self.index else self.index
+        return datetime.now(tz=UTC).strftime(self.index) if "%" in self.index else self.index
 
     async def send(self, document: dict[str, Any]) -> bool:
         self._buffer.append(document)

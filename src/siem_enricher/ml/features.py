@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import re
 import zlib
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 #: Порядок признаков фиксирован: он же сохраняется в артефакт модели при обучении.
 FEATURE_NAMES: tuple[str, ...] = (

@@ -3,17 +3,18 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 from siem_enricher.audit import AuditLogger
 from siem_enricher.config import AppConfig
 from siem_enricher.logging_setup import get_logger
 from siem_enricher.metrics import ServiceMetrics
-from siem_enricher.models.enums import ActionType, PolicyDecision, Severity
 from siem_enricher.models.enrichment import PolicyOutcome
-from siem_enricher.policy.actions import ActionContext, ActionFactory, DEFAULT_FACTORY
+from siem_enricher.models.enums import ActionType, PolicyDecision, Severity
+from siem_enricher.policy.actions import DEFAULT_FACTORY, ActionContext, ActionFactory
 from siem_enricher.policy.blockers import BlockExecutor, build_blocker
 from siem_enricher.policy.rules import ActionSpec, PolicyRule, load_rules, validate_rules
 

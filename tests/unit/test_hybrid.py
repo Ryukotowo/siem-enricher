@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import unittest
-from typing import Iterable
+from collections.abc import Iterable
 
 from siem_enricher.ml import HeuristicSensitivityClassifier
 from siem_enricher.ml.base import SensitivityClassifier
-from siem_enricher.ml.hybrid import HybridSettings, HybridSensitivityClassifier
-from siem_enricher.models.enums import SensitivityLevel
+from siem_enricher.ml.hybrid import HybridSensitivityClassifier, HybridSettings
 from siem_enricher.models.enrichment import SensitivityAssessment
+from siem_enricher.models.enums import SensitivityLevel
 
 
 class FakeModel(SensitivityClassifier):

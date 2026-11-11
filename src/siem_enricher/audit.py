@@ -5,9 +5,10 @@ from __future__ import annotations
 import atexit
 import json
 import threading
-from datetime import datetime, timezone
+from collections.abc import Mapping
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 FLUSH_EVERY = 32
 
@@ -54,7 +55,7 @@ class AuditLogger:
             self._records_written += 1  # учёт «сухих» решений для отчётности
             return
         payload = dict(record)
-        payload.setdefault("audit_ts", datetime.now(tz=timezone.utc).isoformat().replace("+00:00", "Z"))
+        payload.setdefault("audit_ts", datetime.now(tz=UTC).isoformat().replace("+00:00", "Z"))
         line = json.dumps(payload, ensure_ascii=False, default=str) + "\n"
         with _LOCK:
             buffer = _BUFFERS.setdefault(self.path, [])

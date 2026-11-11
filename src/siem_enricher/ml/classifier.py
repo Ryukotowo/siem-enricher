@@ -2,23 +2,24 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any
 
 from siem_enricher.config import MlConfig, load_structured
 from siem_enricher.logging_setup import get_logger
 from siem_enricher.ml.base import SensitivityClassifier, aggregate_level
 from siem_enricher.ml.fallback_rules import HeuristicSensitivityClassifier
 from siem_enricher.ml.features import FEATURE_NAMES, extract_features, feature_importance_hint
-from siem_enricher.ml.hybrid import HybridSettings, HybridSensitivityClassifier
+from siem_enricher.ml.hybrid import HybridSensitivityClassifier, HybridSettings
 from siem_enricher.ml.transformer_classifier import (
     TransformerSensitivityClassifier,
     checkpoint_info,
     is_checkpoint,
     render_text,
 )
-from siem_enricher.models.enums import SensitivityLevel
 from siem_enricher.models.enrichment import SensitivityAssessment
+from siem_enricher.models.enums import SensitivityLevel
 
 logger = get_logger("ml.classifier")
 

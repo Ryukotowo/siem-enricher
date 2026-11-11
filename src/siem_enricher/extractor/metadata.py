@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass, field
-from typing import Any, Iterable, Iterator, Mapping
+from typing import Any
 
 from siem_enricher.config import ExtractorConfig
 from siem_enricher.extractor import patterns as pat
@@ -260,7 +261,7 @@ class MetadataExtractor:
                 self._add_file(files, value, field_path=field_path, action=action,
                                embedded=False, meta=meta)
             file_source_keys.extend([key] * (len(files) - before))
-        for field_path, key, value in weak_hits:
+        for field_path, _key, value in weak_hits:
             if pat.looks_like_path(value):
                 self._add_file(files, value, field_path=field_path, action=ProvenanceAction.UNKNOWN,
                                embedded=False, meta=meta)
@@ -280,9 +281,7 @@ class MetadataExtractor:
             key = file_source_keys[index] if index < len(file_source_keys) else ""
             if key in SOURCE_FILE_KEYS:
                 continue
-            if meta.action is not ProvenanceAction.UNKNOWN and not file_ref.is_embedded:
-                file_ref.action = meta.action
-            elif file_ref.action is ProvenanceAction.UNKNOWN:
+            if meta.action is not ProvenanceAction.UNKNOWN and not file_ref.is_embedded or file_ref.action is ProvenanceAction.UNKNOWN:
                 file_ref.action = meta.action
         return meta
 
@@ -326,9 +325,8 @@ class MetadataExtractor:
         elif canonical == "file_hash":
             for name, value in pat.find_hashes(text).items():
                 meta.hashes.setdefault(name, value)
-        elif canonical == "action_raw":
-            if meta.action is ProvenanceAction.UNKNOWN:
-                meta.action = ProvenanceAction.from_value(text)
+        elif canonical == "action_raw" and meta.action is ProvenanceAction.UNKNOWN:
+            meta.action = ProvenanceAction.from_value(text)
 
     def _apply_context_key(
         self,

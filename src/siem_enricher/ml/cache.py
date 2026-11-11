@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from collections import OrderedDict
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 from siem_enricher.ml.base import SensitivityClassifier
 from siem_enricher.models.enrichment import SensitivityAssessment

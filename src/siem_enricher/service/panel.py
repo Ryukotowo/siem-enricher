@@ -8,8 +8,9 @@ from __future__ import annotations
 
 import json
 from collections import deque
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 PANEL_HTML = """<!DOCTYPE html>
 <html lang="ru">
@@ -768,7 +769,7 @@ def _clean_name(name: str | None, path: str | None) -> str:
     if not name or name.lower().startswith("sha256:"):
         path = (path or "").strip()
         if path and not path.lower().startswith("sha256:"):
-            return path.replace("\\\\", "/").rsplit("/", 1)[-1]
+            return path.replace("\\", "/").rsplit("/", 1)[-1]
         return "(файл по хэшу)"
     return name
 
@@ -1042,7 +1043,7 @@ def apply_settings(app: Any, payload: dict[str, Any]) -> tuple[list[str], list[s
 SETTINGS_FILE = "var/runtime-settings.json"
 
 
-def _settings_path() -> "Path":
+def _settings_path() -> Path:
     from pathlib import Path
 
     candidate = Path.cwd() / SETTINGS_FILE
@@ -1129,10 +1130,10 @@ def register_panel(app, buffer) -> bool:
 
     @app.get("/ui/stream", include_in_schema=False)
     async def panel_stream(request: Request) -> Any:
-        from fastapi.responses import StreamingResponse
-
         import asyncio
         import json
+
+        from fastapi.responses import StreamingResponse
 
         queue: asyncio.Queue = asyncio.Queue(maxsize=500)
         buffer.subscribe(lambda record: queue.put_nowait(record))
@@ -1144,7 +1145,7 @@ def register_panel(app, buffer) -> bool:
                         break
                     try:
                         record = await asyncio.wait_for(queue.get(), timeout=15)
-                    except asyncio.TimeoutError:
+                    except TimeoutError:
                         yield ": keep-alive\n\n"
                         continue
                     yield "data: " + json.dumps(record, ensure_ascii=False) + "\n\n"

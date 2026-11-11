@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from siem_enricher.connectors.base import (
     SINK_TYPES,
     SOURCE_TYPES,

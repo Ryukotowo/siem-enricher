@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Any, Iterable
+from typing import Any
 
 from siem_enricher.logging_setup import get_logger
 from siem_enricher.ml.base import SensitivityClassifier
-from siem_enricher.models.enums import SensitivityLevel
 from siem_enricher.models.enrichment import SensitivityAssessment
+from siem_enricher.models.enums import SensitivityLevel
 
 logger = get_logger("ml.hybrid")
 

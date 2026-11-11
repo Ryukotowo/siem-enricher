@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import os
-
 import asyncio
+import os
 import time
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
 
 from siem_enricher.config import AppConfig, ConnectorConfig
 from siem_enricher.connectors import SinkConnector, SourceConnector, build_sink, build_source

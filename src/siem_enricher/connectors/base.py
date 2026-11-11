@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, AsyncIterator, Callable, Mapping, Sequence
+from collections.abc import AsyncIterator, Callable, Mapping, Sequence
+from typing import Any
 
 from siem_enricher.config import ConnectorConfig
 from siem_enricher.extractor import MetadataExtractor
