@@ -91,6 +91,28 @@ curl -X POST http://localhost:8081/ui/rules/reload -H "X-Analyst: admin"
 python tools/train_from_labels.py --input var/labels/org1/dataset.jsonl --tenant org1
 ```
 
+## Обучение в контейнере (профиль trainer)
+
+Сервис-обогатитель намеренно лёгкий: torch в него не входит. Обучение вынесено
+в отдельный образ:
+
+```bash
+# только проверить датасет
+docker compose --profile trainer run --rm trainer --dry-run
+
+# обучить для организации org1 (метки берутся из var/labels/org1/dataset.jsonl)
+docker compose --profile trainer run --rm trainer --tenant org1
+
+# ограничить проверку регрессии 60 путями (экономит память)
+docker compose --profile trainer run --rm trainer --regression-limit 60
+```
+
+Образ собирается один раз: `docker compose --profile trainer build trainer`.
+Каталоги `ml/` и `var/` монтируются с хоста, поэтому веса и метки остаются вне
+образа. Модель загружается однократно: на ней снимаются метрики «до», затем
+голова заменяется на 4 класса и выполняется дообучение; SGD с моментом вместо
+AdamW снижает потребление памяти, что важно для машин с 8 ГБ.
+
 ## Обратная связь и дообучение
 
 Метки аналитика (подтверждение / ложное срабатывание) сохраняются в `var/labels/analyst_labels.jsonl`.

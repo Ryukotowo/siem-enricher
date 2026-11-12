@@ -164,6 +164,23 @@ services:
     networks: [enricher-net]
 
   # --- Поиск по обогащённым событиям (профиль quickwit) ---
+  trainer:
+    build:
+      context: .
+      dockerfile: Dockerfile.trainer
+    image: siem-enricher-trainer:0.1.0
+    container_name: siem-enricher-trainer
+    profiles: ["trainer"]
+    environment:
+      TENANT: "${TENANT:-default}"
+      INPUT: "${TRAIN_INPUT:-}"
+    volumes:
+      - ./ml:/app/ml
+      - ./var:/app/var
+      - ./config:/app/config
+    networks:
+      - enricher-net
+
   quickwit:
     image: quickwit/quickwit:0.8.1
     profiles: ["quickwit"]

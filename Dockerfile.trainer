@@ -1,0 +1,34 @@
+# Образ для дообучения модели по меткам аналитиков.
+#
+# Сервис-обогатитель намеренно лёгкий (без torch), поэтому обучение вынесено
+# в отдельный образ с профилем compose "trainer":
+#
+#     docker compose --profile trainer run --rm trainer --dry-run
+#     docker compose --profile trainer run --rm trainer --tenant org1
+#
+# Каталоги ml/ и var/ монтируются с хоста: веса и метки остаются вне образа.
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONPATH=/app/src \
+    TOKENIZERS_PARALLELISM=false \
+    HF_HUB_OFFLINE=1 \
+    TRANSFORMERS_OFFLINE=1
+
+WORKDIR /app
+
+COPY requirements-ml.txt ./
+RUN pip install --no-cache-dir -r requirements-ml.txt
+
+COPY src ./src
+COPY tools ./tools
+COPY config ./config
+COPY ml/regression_set.jsonl ./ml/regression_set.jsonl
+
+COPY deploy/trainer/entrypoint.sh /usr/local/bin/trainer-entrypoint
+RUN chmod +x /usr/local/bin/trainer-entrypoint
+
+ENTRYPOINT ["trainer-entrypoint"]
