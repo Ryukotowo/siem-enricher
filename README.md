@@ -113,6 +113,27 @@ docker compose --profile trainer run --rm trainer --regression-limit 60
 голова заменяется на 4 класса и выполняется дообучение; SGD с моментом вместо
 AdamW снижает потребление памяти, что важно для машин с 8 ГБ.
 
+## Версии модели и откат
+
+Каждая принятая модель регистрируется как версия в `ml/artifacts/versions.json`
+(для организации — `ml/artifacts/<tenant>/versions.json`), а рабочий каталог
+`sensitivity_feedback` наполняется жёсткими ссылками на файлы версии, поэтому
+история не удваивает место на диске. Хранятся последние пять версий.
+
+```bash
+# посмотреть историю
+python tools/rollback_model.py --list
+
+# вернуться на предыдущую версию
+python tools/rollback_model.py
+
+# вернуться на конкретную версию организации
+python tools/rollback_model.py --tenant org1 --to v20261112-094018
+```
+
+Каждый откат и каждое обучение пишутся в журнал `var/audit.jsonl`
+(`kind: model_rollback` / `model_training`) и видны в панели в разделе аудита.
+
 ## Обратная связь и дообучение
 
 Метки аналитика (подтверждение / ложное срабатывание) сохраняются в `var/labels/analyst_labels.jsonl`.

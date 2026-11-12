@@ -246,6 +246,8 @@ def main() -> int:
     import torch
     from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
+    from siem_enricher.ml.registry import ModelRegistry
+
     torch.set_num_threads(max(1, min(2, torch.get_num_threads())))
     tokenizer = AutoTokenizer.from_pretrained(str(BASE_ARTIFACT), local_files_only=True)
     model = AutoModelForSequenceClassification.from_pretrained(
@@ -282,10 +284,28 @@ def main() -> int:
     regression_delta = (after_reg["F1"] - before_reg["F1"]) if (after_reg and before_reg) else 0.0
     accepted = gain >= args.min_gain and regression_delta >= args.min_gain
 
+    registry = ModelRegistry(tenant)
     if accepted:
-        OUTPUT_ARTIFACT.mkdir(parents=True, exist_ok=True)
-        model.save_pretrained(str(OUTPUT_ARTIFACT))
-        tokenizer.save_pretrained(str(OUTPUT_ARTIFACT))
+        staged = ROOT / "ml" / "artifacts" / ".staging"
+        if staged.exists():
+            import shutil
+
+            shutil.rmtree(staged, ignore_errors=True)
+        staged.mkdir(parents=True, exist_ok=True)
+        model.save_pretrained(str(staged))
+        tokenizer.save_pretrained(str(staged))
+        record = registry.register(
+            staged,
+            {"до": before, "после": after,
+             "регрессия до": before_reg, "регрессия после": after_reg},
+            note=f"меток {len(rows)}, сильных {len(strong)}",
+            actor="trainer",
+        )
+        import shutil
+
+        shutil.rmtree(staged, ignore_errors=True)
+        OUTPUT_ARTIFACT = Path(record["artifact"])
+        print(f"версия модели: {record['id']} -> {registry.active_path().name}")
 
     REPORT.parent.mkdir(parents=True, exist_ok=True)
     REPORT.write_text(json.dumps({
