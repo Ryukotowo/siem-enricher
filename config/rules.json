@@ -1,0 +1,48 @@
+{
+  "schema_version": "1.0",
+  "description": "Шаблон правил организации. Включённое правило (enabled: true) накладывается на встроенные: тот же id заменяет встроенное, новый id добавляется, enabled: false отключает правило. По умолчанию примеры выключены, чтобы поведение сервиса не менялось.",
+  "directories": [
+    {
+      "id": "dir_contracts_org",
+      "enabled": false,
+      "level": "confidential",
+      "weight": 1.3,
+      "pattern": "(?i)(\\\\|/)(договор\\w*|контракт\\w*|сделки)(\\\\|/)",
+      "note": "пример: каталог договоров организации"
+    },
+    {
+      "id": "dir_clients_org",
+      "enabled": false,
+      "level": "confidential",
+      "weight": 1.2,
+      "pattern": "(?i)(\\\\|/)(клиенты|клиентская база|заказчики)(\\\\|/)",
+      "note": "пример: каталог с данными клиентов"
+    }
+  ],
+  "filenames": [
+    {
+      "id": "client_base",
+      "enabled": false,
+      "level": "confidential",
+      "weight": 1.1,
+      "pattern": "(?i)(база[_ ]?клиент\\w*|клиентская[_ ]?база|crm[_ ]?export|client[_ ]?base)",
+      "note": "пример: база клиентов организации"
+    },
+    {
+      "id": "regulations",
+      "enabled": false,
+      "level": "internal",
+      "weight": 0.7,
+      "pattern": "(?i)(регламент\\w*|инструкц\\w*|положени\\w*)",
+      "note": "пример: внутренние регламенты"
+    }
+  ],
+  "extensions": {
+    ".1c": {
+      "enabled": false,
+      "level": "internal",
+      "weight": 0.9,
+      "note": "пример: файлы 1С"
+    }
+  }
+}

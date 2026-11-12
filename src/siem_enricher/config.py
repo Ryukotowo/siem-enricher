@@ -192,6 +192,7 @@ class MlConfig:
     artifact_path: str = "ml/artifacts/sensitivity_transformer"
     label_encoder_file: str = "label_encoder.pkl"
     labels_file: str = "config/sensitivity_labels.json"
+    rules_file: str = "config/rules.json"
     model_version: str = "auto"
     default_level: str = "internal"
     confidence_floor: float = 0.35

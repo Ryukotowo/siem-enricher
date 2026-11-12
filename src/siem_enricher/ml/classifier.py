@@ -12,6 +12,7 @@ from siem_enricher.ml.base import SensitivityClassifier, aggregate_level
 from siem_enricher.ml.fallback_rules import HeuristicSensitivityClassifier
 from siem_enricher.ml.features import FEATURE_NAMES, extract_features, feature_importance_hint
 from siem_enricher.ml.hybrid import HybridSensitivityClassifier, HybridSettings
+from siem_enricher.ml.rules_config import load_rules
 from siem_enricher.ml.transformer_classifier import (
     TransformerSensitivityClassifier,
     checkpoint_info,
@@ -207,10 +208,17 @@ def _build_classifier(
     mode = (config.type or "auto").lower()
     explicit_version = "" if (config.model_version or "auto").lower() in {"auto", ""} else config.model_version
 
+    spec = load_rules(getattr(config, "rules_file", None))
+    if spec.errors:
+        logger.warning("Правила из конфигурации загружены с замечаниями",
+                       extra={"errors": spec.errors, "file": str(spec.source)})
     rules = HeuristicSensitivityClassifier(
         default_level=SensitivityLevel.from_value(config.default_level, default=SensitivityLevel.INTERNAL),
         model_version=explicit_version or HEURISTIC_VERSION,
         confidence_floor=config.confidence_floor,
+        filename_rules=spec.filename_rules,
+        directory_rules=spec.directory_rules,
+        extension_rules=spec.extension_rules,
     )
     if mode == "heuristic":
         return rules

@@ -238,6 +238,7 @@ PANEL_HTML = """<!DOCTYPE html>
     <div id="audit-list" class="audit"></div>
     <div class="actions">
       <button class="cancel" id="settings-cancel">отмена</button>
+      <button class="cancel" id="rules-reload">перечитать правила</button>
       <button class="save" id="settings-save">применить</button>
     </div>
     <div class="result" id="settings-result"></div>
@@ -853,6 +854,25 @@ for (const th of document.querySelectorAll('th[data-sort]')) {
 document.getElementById('settings-cancel').addEventListener('click',
   () => SETTINGS_BOX.classList.remove('open'));
 document.getElementById('settings-save').addEventListener('click', saveSettings);
+
+const rulesReload = document.getElementById('rules-reload');
+if (rulesReload) {
+  rulesReload.addEventListener('click', async () => {
+    try {
+      const response = await fetch('/ui/rules/reload', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json',
+                  'X-Analyst': 'panel'}
+      });
+      const payload = await response.json();
+      SETTINGS_RESULT.textContent = payload.ok
+        ? 'правила перечитаны: ' + payload.model_version + ' (' + payload.rules + ' каталогов)'
+        : 'не удалось: ' + (payload.error || 'неизвестная ошибка');
+    } catch (error) {
+      SETTINGS_RESULT.textContent = 'не удалось: ' + error.message;
+    }
+  });
+}
 </script>
 </body>
 </html>
@@ -1026,6 +1046,28 @@ def _pipeline_of(app: Any) -> Any:
     if pipeline is None:
         pipeline = getattr(app.state, "pipeline", None)
     return pipeline
+
+
+def reload_rules(app: Any) -> dict[str, Any]:
+    """Пересобрать классификатор по файлу правил без перезапуска сервиса."""
+    pipeline = _pipeline_of(app)
+    if pipeline is None:
+        return {"ok": False, "error": "сервис не запущен в режиме обработки"}
+    config = getattr(app.state, "config", None)
+    if config is None:
+        return {"ok": False, "error": "нет конфигурации"}
+    from siem_enricher.ml.classifier import build_classifier
+
+    fresh = build_classifier(config.ml, None, labels_path=config.labels_path)
+    pipeline.classifier = fresh
+    directory_rules = getattr(getattr(fresh, "rules", fresh), "directory_rules", None)
+    _audit(app, {"kind": "rules_reload", "key": "config/rules.json",
+                 "from": "-", "to": getattr(fresh, "model_version", "unknown")})
+    return {
+        "ok": True,
+        "model_version": getattr(fresh, "model_version", "unknown"),
+        "rules": len(directory_rules) if directory_rules is not None else None,
+    }
 
 
 def read_rules(app: Any) -> list[dict[str, Any]]:
@@ -1460,6 +1502,14 @@ def register_panel(app, buffer) -> bool:
         if errors:
             return JSONResponse({"errors": errors}, status_code=400)
         return JSONResponse({"record": record, "counts": read_labels(request.app)["counts"]})
+
+    @app.post("/ui/rules/reload", include_in_schema=False)
+    async def panel_rules_reload(request: Request) -> Any:
+        request.app.state.audit_actor = (request.headers.get("X-Analyst")
+                                        or getattr(request.client, "host", "panel"))
+        result = reload_rules(request.app)
+        status = 200 if result.get("ok") else 400
+        return JSONResponse(result, status_code=status)
 
     @app.get("/ui/labels/export", include_in_schema=False)
     async def panel_labels_export(request: Request, strength: str = "all") -> Any:

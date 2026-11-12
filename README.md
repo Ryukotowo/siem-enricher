@@ -29,6 +29,37 @@ ruff check src tests
 python -m unittest discover -s tests -t .
 ```
 
+## Правила организации без правки кода
+
+Файлы правил лежат в `config/` и накладываются на встроенные при старте:
+
+| Файл | Что настраивает |
+|---|---|
+| `config/rules.json` | каталоги, шаблоны имён, расширения |
+| `config/sensitivity_labels.json` | карта категорий модели в классы |
+| `config/policies.json` | правила реакции (POL-001…POL-013) |
+
+Правило из `rules.json` с тем же `id`, что и встроенное, заменяет его; новый `id`
+добавляется; `enabled: false` отключает. Пример:
+
+```json
+{
+  "directories": [
+    {"id": "dir_contracts_org", "enabled": true, "level": "confidential",
+     "weight": 1.3, "pattern": "(?i)(\\\\|/)(договор\\w*|контракт\\w*)(\\\\|/)",
+     "note": "каталог договоров"}
+  ]
+}
+```
+
+Применить без перезапуска: кнопка **«перечитать правила»** в настройках панели или
+
+```bash
+curl -X POST http://localhost:8081/ui/rules/reload -H "X-Analyst: admin"
+```
+
+Путь к файлу задаётся в конфигурации: `ml.rules_file` (по умолчанию `config/rules.json`).
+
 ## Обратная связь и дообучение
 
 Метки аналитика (подтверждение / ложное срабатывание) сохраняются в `var/labels/analyst_labels.jsonl`.
