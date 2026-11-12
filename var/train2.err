@@ -1,0 +1,17 @@
+Loading weights:   0%|          | 0/201 [00:00<?, ?it/s]Loading weights: 100%|██████████| 201/201 [00:00<00:00, 3640.17it/s]
+Loading weights:   0%|          | 0/201 [00:00<?, ?it/s]Loading weights: 100%|██████████| 201/201 [00:00<00:00, 7461.79it/s]
+[transformers] You passed `num_labels=4` which is incompatible to the `id2label` map of length `6`.
+Loading weights:   0%|          | 0/201 [00:00<?, ?it/s]Loading weights: 100%|██████████| 201/201 [00:00<00:00, 7971.93it/s]
+[transformers] [1mBertForSequenceClassification LOAD REPORT[0m from: C:\Users\idv1102\Documents\deepseek-harness\default-workspace\siem-enricher\ml\artifacts\sensitivity_transformer
+Key               | Status   |                                                                                       
+------------------+----------+---------------------------------------------------------------------------------------
+classifier.weight | MISMATCH | Reinit due to size mismatch - ckpt: torch.Size([6, 768]) vs model:torch.Size([4, 768])
+classifier.bias   | MISMATCH | Reinit due to size mismatch - ckpt: torch.Size([6]) vs model:torch.Size([4])          
+
+Notes:
+- MISMATCH:	ckpt weights were loaded, but they did not match the original empty weight shapes.
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s]Writing model shards: 100%|██████████| 1/1 [00:02<00:00,  2.42s/it]Writing model shards: 100%|██████████| 1/1 [00:02<00:00,  2.42s/it]
+Loading weights:   0%|          | 0/201 [00:00<?, ?it/s]Loading weights: 100%|██████████| 201/201 [00:00<00:00, 5198.27it/s]
+Категории модели отсутствуют в карте соответствия — будет использован класс по умолчанию
+Loading weights:   0%|          | 0/201 [00:00<?, ?it/s]Loading weights: 100%|██████████| 201/201 [00:00<00:00, 6312.51it/s]
+Категории модели отсутствуют в карте соответствия — будет использован класс по умолчанию

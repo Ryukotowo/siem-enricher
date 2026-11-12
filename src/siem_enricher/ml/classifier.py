@@ -303,6 +303,32 @@ def _build_classifier(
     return rules
 
 
+def resolve_artifact_path(path: str | Path) -> Path:
+    """Выбрать артефакт модели.
+
+    Значение ``auto`` означает «самый свежий рабочий артефакт»: каталог модели
+    с ``config.json`` внутри ``ml/artifacts``, кроме отклонённых (суффикс
+    ``.rejected``). Это позволяет применять принятую после дообучения модель
+    без правки конфигурации.
+    """
+    raw = str(path).strip()
+    if raw.lower() != "auto":
+        return Path(raw)
+
+    root = Path.cwd() / "ml" / "artifacts"
+    if not root.exists():
+        return Path(raw)
+    candidates = [
+        item for item in root.iterdir()
+        if item.is_dir() and (item / "config.json").exists()
+        and not item.name.endswith(".rejected")
+    ]
+    if not candidates:
+        return Path(raw)
+    newest = max(candidates, key=lambda item: (item / "config.json").stat().st_mtime)
+    return newest.resolve()
+
+
 def _build_transformer(
     config: MlConfig,
     category_map: Mapping[str, str],
@@ -311,7 +337,7 @@ def _build_transformer(
 ) -> TransformerSensitivityClassifier:
     """Загрузить трансформер-классификатор из чекпоинта."""
     return TransformerSensitivityClassifier(
-        model_path=config.artifact_path,
+        model_path=str(resolve_artifact_path(config.artifact_path)),
         category_map=category_map,
         label_encoder_file=config.label_encoder_file,
         max_length=config.max_length,

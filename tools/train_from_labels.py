@@ -1,8 +1,7 @@
-"""Дообучение модели по меткам аналитиков с проверкой качества.
+"""Дообучение модели по меткам аналитиков: сильные метки, регрессия, отказ.
 
-Цикл: экспорт меток (/ui/labels/export) -> датасет -> дообучение ->
-сравнение с текущей моделью на отложенной выборке -> сохранение только
-если новая модель не хуже.
+Цикл: экспорт меток -> датасет -> дообучение -> сравнение с текущей моделью
+на отложенной выборке и на фиксированном регрессионном наборе -> приёмка.
 
     python tools/train_from_labels.py --input var/labels/dataset.jsonl --dry-run
     python tools/train_from_labels.py --input var/labels/dataset.jsonl
@@ -13,6 +12,7 @@ from __future__ import annotations
 import argparse
 import json
 import random
+import shutil
 import sys
 from pathlib import Path
 
@@ -23,6 +23,8 @@ for candidate in (ROOT / "src", ROOT):
 
 BASE_ARTIFACT = ROOT / "ml" / "artifacts" / "sensitivity_transformer"
 OUTPUT_ARTIFACT = ROOT / "ml" / "artifacts" / "sensitivity_feedback"
+REJECTED_ARTIFACT = ROOT / "ml" / "artifacts" / "sensitivity_feedback.rejected"
+REGRESSION_SET = ROOT / "ml" / "regression_set.jsonl"
 REPORT = ROOT / "var" / "labels" / "training_report.json"
 LEVELS = ["public", "internal", "confidential", "secret"]
 SEED = 42
@@ -30,22 +32,12 @@ EPOCHS = 3
 MAX_LEN = 64
 BATCH = 8
 LR = 2e-5
+MIN_ROWS = 20
 
 
-def load_category_map() -> dict[str, str]:
-    """Категории базовой модели -> классы конфиденциальности."""
-    import json
-
-    config = json.loads((ROOT / "config" / "config.local.json").read_text(encoding="utf-8"))
-    path = config.get("labels_path")
-    if not path:
-        return {}
-    from siem_enricher.ml.classifier import load_category_map as load_map
-
-    return load_map(ROOT / path)
-
-
-def load_rows(path: Path) -> list[dict]:
+def load_jsonl(path: Path) -> list[dict]:
+    if not path.exists():
+        return []
     rows = []
     for line in path.read_text(encoding="utf-8").splitlines():
         if not line.strip():
@@ -53,13 +45,10 @@ def load_rows(path: Path) -> list[dict]:
         item = json.loads(line)
         if item.get("path") and item.get("level") in LEVELS:
             rows.append(item)
-    unique = {}
-    for row in rows:
-        unique[str(row["path"]).lower()] = row
-    return list(unique.values())
+    return rows
 
 
-def split(rows: list[dict]) -> tuple[list[dict], list[dict]]:
+def split(rows: list[dict], share: float = 0.8) -> tuple[list[dict], list[dict]]:
     rng = random.Random(SEED)
     by_level: dict[str, list[dict]] = {}
     for row in rows:
@@ -67,18 +56,32 @@ def split(rows: list[dict]) -> tuple[list[dict], list[dict]]:
     train, holdout = [], []
     for items in by_level.values():
         rng.shuffle(items)
-        cut = max(1, int(len(items) * 0.8))
+        cut = max(1, int(len(items) * share))
         train.extend(items[:cut])
         holdout.extend(items[cut:])
     return train, holdout
 
 
-def evaluate_model(artifact: Path, rows: list[dict]) -> dict[str, float]:
-    """Оценить артефакт на отложенной выборке через сам конвейер.
+def metrics(pairs: list[tuple[str, str]]) -> dict[str, float]:
+    correct = sum(1 for truth, pred in pairs if truth == pred)
+    positives = {"confidential", "secret"}
+    tp = sum(1 for truth, pred in pairs if truth in positives and pred in positives)
+    fn = sum(1 for truth, pred in pairs if truth in positives and pred not in positives)
+    fp = sum(1 for truth, pred in pairs if truth not in positives and pred in positives)
+    _tn = sum(1 for truth, pred in pairs if truth not in positives and pred not in positives)
+    precision = tp / (tp + fp) if tp + fp else 0.0
+    recall = tp / (tp + fn) if tp + fn else 0.0
+    return {
+        "по классам": round(correct / len(pairs), 3) if pairs else 0.0,
+        "полнота": round(recall, 3),
+        "точность": round(precision, 3),
+        "F1": round(2 * precision * recall / (precision + recall), 3) if precision + recall else 0.0,
+        "объектов": len(pairs),
+    }
 
-    Конвейер умеет и карту категорий (базовая модель), и прямые классы
-    (дообученная), поэтому сравнение корректно для обеих.
-    """
+
+def evaluate_model(artifact: Path, rows: list[dict]) -> dict[str, float]:
+    """Оценить артефакт через конвейер: он знает и категории, и классы."""
     from siem_enricher.config import load_config
     from siem_enricher.enricher import EnrichmentPipeline
 
@@ -91,25 +94,10 @@ def evaluate_model(artifact: Path, rows: list[dict]) -> dict[str, float]:
         pairs = [(row["level"], pipeline.classifier.predict(row["path"]).level.value) for row in rows]
     finally:
         pipeline.close()
-
-    correct = sum(1 for truth, pred in pairs if truth == pred)
-    positives = {"confidential", "secret"}
-    tp = sum(1 for truth, pred in pairs if truth in positives and pred in positives)
-    fn = sum(1 for truth, pred in pairs if truth in positives and pred not in positives)
-    fp = sum(1 for truth, pred in pairs if truth not in positives and pred in positives)
-    tn = sum(1 for truth, pred in pairs if truth not in positives and pred not in positives)
-    precision = tp / (tp + fp) if tp + fp else 0.0
-    recall = tp / (tp + fn) if tp + fn else 0.0
-    return {
-        "по классам": round(correct / len(pairs), 3) if pairs else 0.0,
-        "полнота": round(recall, 3),
-        "точность": round(precision, 3),
-        "F1": round(2 * precision * recall / (precision + recall), 3) if precision + recall else 0.0,
-        "объектов": len(pairs),
-    }
+    return metrics(pairs)
 
 
-def finetune(train: list[dict], holdout: list[dict], artifact: Path) -> None:
+def finetune(train: list[dict]) -> None:
     import torch
     from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
@@ -144,9 +132,19 @@ def finetune(train: list[dict], holdout: list[dict], artifact: Path) -> None:
             correct += int((logits.argmax(dim=-1) == target).sum())
         print(f"  эпоха {epoch}: loss {loss.item():.3f}, точность обучения {correct / total:.3f}")
 
-    artifact.mkdir(parents=True, exist_ok=True)
-    model.save_pretrained(str(artifact))
-    tokenizer.save_pretrained(str(artifact))
+    OUTPUT_ARTIFACT.mkdir(parents=True, exist_ok=True)
+    model.save_pretrained(str(OUTPUT_ARTIFACT))
+    tokenizer.save_pretrained(str(OUTPUT_ARTIFACT))
+
+
+def reject_artifact() -> None:
+    """Отклонённую модель не оставляем среди рабочих артефактов."""
+    if not OUTPUT_ARTIFACT.exists():
+        return
+    if REJECTED_ARTIFACT.exists():
+        shutil.rmtree(REJECTED_ARTIFACT, ignore_errors=True)
+    OUTPUT_ARTIFACT.rename(REJECTED_ARTIFACT)
+    print(f"модель перемещена в {REJECTED_ARTIFACT.name}")
 
 
 def main() -> int:
@@ -154,45 +152,72 @@ def main() -> int:
     parser.add_argument("--input", required=True, help="JSONL из /ui/labels/export")
     parser.add_argument("--dry-run", action="store_true", help="только проверить датасет")
     parser.add_argument("--min-gain", type=float, default=-0.02,
-                        help="допустимое падение F1 относительно текущей модели")
+                        help="допустимое падение F1 на отложенной выборке и на регрессии")
     args = parser.parse_args()
 
-    rows = load_rows(Path(args.input))
-    if len(rows) < 20:
-        print(f"меток мало для обучения: {len(rows)} (нужно минимум 20)")
+    rows = load_jsonl(Path(args.input))
+    strong = [row for row in rows if row.get("strength") == "strong"]
+    weak = [row for row in rows if row.get("strength") != "strong"]
+    print(f"меток всего: {len(rows)} (сильных {len(strong)}, слабых {len(weak)})")
+    if len(rows) < MIN_ROWS:
+        print(f"меток мало для обучения: {len(rows)} (нужно минимум {MIN_ROWS})")
         return 1
 
-    train, holdout = split(rows)
-    counts = {level: sum(1 for row in rows if row["level"] == level) for level in LEVELS}
-    print(f"всего меток: {len(rows)} -> обучение {len(train)}, отложенная {len(holdout)}")
-    print(f"по классам: {counts}")
+    base_train = strong if len(strong) >= MIN_ROWS else rows
+    if len(strong) < MIN_ROWS:
+        print("сильных меток мало: обучение на всём наборе, включая подтверждения без правки класса")
+
+    train, holdout = split(base_train)
+    counts = {level: sum(1 for row in base_train if row["level"] == level) for level in LEVELS}
+    print(f"обучение {len(train)}, отложенная {len(holdout)}, по классам {counts}")
     if args.dry_run:
         print("dry-run: обучение не запускается")
         return 0
 
+    regression = load_jsonl(REGRESSION_SET)
+    print(f"регрессионный набор: {len(regression)} путей")
+
     print("\n=== текущая модель ===")
     before = evaluate_model(BASE_ARTIFACT, holdout)
-    print(f"  {before}")
+    before_reg = evaluate_model(BASE_ARTIFACT, regression) if regression else None
+    print(f"  отложенная: {before}")
+    if before_reg:
+        print(f"  регрессия:  {before_reg}")
 
     print("\n=== дообучение ===")
-    finetune(train, holdout, OUTPUT_ARTIFACT)
+    finetune(train)
 
     print("\n=== новая модель ===")
     after = evaluate_model(OUTPUT_ARTIFACT, holdout)
-    print(f"  {after}")
+    after_reg = evaluate_model(OUTPUT_ARTIFACT, regression) if regression else None
+    print(f"  отложенная: {after}")
+    if after_reg:
+        print(f"  регрессия:  {after_reg}")
 
     gain = after["F1"] - before["F1"]
-    accepted = gain >= args.min_gain
+    regression_delta = (after_reg["F1"] - before_reg["F1"]) if (after_reg and before_reg) else 0.0
+    accepted = gain >= args.min_gain and regression_delta >= args.min_gain
+
     REPORT.parent.mkdir(parents=True, exist_ok=True)
     REPORT.write_text(json.dumps({
-        "меток": len(rows), "обучение": len(train), "отложенная": len(holdout),
-        "классы": counts, "до": before, "после": after,
-        "прирост F1": round(gain, 3), "модель сохранена": accepted,
+        "меток": len(rows), "сильных": len(strong), "слабых": len(weak),
+        "обучение": len(train), "отложенная": len(holdout), "классы": counts,
+        "до": before, "после": after,
+        "регрессия до": before_reg, "регрессия после": after_reg,
+        "прирост F1": round(gain, 3),
+        "изменение на регрессии": round(regression_delta, 3),
+        "модель сохранена": accepted,
         "артефакт": str(OUTPUT_ARTIFACT) if accepted else None,
     }, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    print(f"\nприрост F1: {gain:+.3f} (порог {args.min_gain:+.3f})")
-    print("модель принята" if accepted else "модель отклонена: качество хуже допустимого")
+    print(f"\nприрост на отложенной: {gain:+.3f} (порог {args.min_gain:+.3f})")
+    if before_reg and after_reg:
+        print(f"изменение на регрессии: {regression_delta:+.3f}")
+    if accepted:
+        print("модель принята")
+    else:
+        reject_artifact()
+        print("модель отклонена")
     print(f"отчёт: {REPORT}")
     return 0
 

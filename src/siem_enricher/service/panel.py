@@ -1174,10 +1174,12 @@ def export_training_rows(app: Any) -> list[dict[str, Any]]:
             target = record.get("predicted_level")
         if target not in LABEL_LEVELS:
             continue
+        strength = "strong" if record.get("true_level") else "weak"
         rows[path.lower()] = {
             "path": path,
             "name": record.get("file") or path.rsplit("\\", 1)[-1],
             "level": target,
+            "strength": strength,
             "event_id": record.get("event_id"),
             "label": record.get("label"),
             "actor": record.get("actor"),
@@ -1460,10 +1462,12 @@ def register_panel(app, buffer) -> bool:
         return JSONResponse({"record": record, "counts": read_labels(request.app)["counts"]})
 
     @app.get("/ui/labels/export", include_in_schema=False)
-    async def panel_labels_export(request: Request) -> Any:
+    async def panel_labels_export(request: Request, strength: str = "all") -> Any:
         from fastapi.responses import Response
 
         rows = export_training_rows(request.app)
+        if strength in {"strong", "weak"}:
+            rows = [row for row in rows if row.get("strength") == strength]
         body = "\n".join(json.dumps(row, ensure_ascii=False) for row in rows) + "\n"
         return Response(content=body, media_type="application/jsonl",
                         headers={"Content-Disposition": "attachment; filename=labels_dataset.jsonl"})
