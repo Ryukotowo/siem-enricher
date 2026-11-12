@@ -32,8 +32,8 @@ services:
       - --rpc-addr=0.0.0.0:33145
       - --advertise-rpc-addr=redpanda:33145
     ports:
-      - "9092:9092"
-      - "9644:9644"
+      - "19092:9092"
+      - "9645:9644"
     volumes:
       - redpanda-data:/var/lib/redpanda/data
     healthcheck:
@@ -43,6 +43,7 @@ services:
       retries: 12
       start_period: 20s
     networks: [enricher-net]
+    restart: unless-stopped
 
   # Создание топиков обмена: исходные и обогащённые события
   redpanda-init:
@@ -75,7 +76,7 @@ services:
       POLICY_MODE: dry_run
       PROVENANCE_BACKEND: sqlite
     ports:
-      - "8080:8080"
+      - "8081:8080"
     volumes:
       - ./var:/app/var
       - state-data:/app/var/state
@@ -90,7 +91,6 @@ services:
         condition: service_healthy
       mock-siem:
         condition: service_started
-    restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/healthz"]
       interval: 30s
@@ -98,6 +98,7 @@ services:
       retries: 3
       start_period: 40s
     networks: [enricher-net]
+    restart: unless-stopped
 
   # --- Хранилище цепочек происхождения для многонодового развёртывания ---
   redis:
@@ -112,6 +113,7 @@ services:
       timeout: 3s
       retries: 5
     networks: [enricher-net]
+    restart: unless-stopped
 
   # --- Заглушка SIEM: принимает обогащённые события по HTTP (приёмник webhook) ---
   mock-siem:
@@ -122,6 +124,7 @@ services:
     volumes:
       - ./var:/app/var
     networks: [enricher-net]
+    restart: unless-stopped
 
   # --- Поставщик синтетических событий (профиль producer) ---
   producer:
@@ -169,10 +172,11 @@ services:
     environment:
       QW_ENABLE_OPENTELEMETRY_OTLP_EXPORTER: "false"
     ports:
-      - "7280:7280"
+      - "7281:7280"
     volumes:
       - quickwit-data:/quickwit/qwdata
     networks: [enricher-net]
+    restart: unless-stopped
 
   quickwit-init:
     image: siem-enricher:0.2.0
@@ -202,7 +206,7 @@ services:
       OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m"
       bootstrap.memory_lock: "false"
     ports:
-      - "9200:9200"
+      - "9201:9200"
     volumes:
       - opensearch-data:/usr/share/opensearch/data
     healthcheck:
@@ -212,6 +216,7 @@ services:
       retries: 30
       start_period: 30s
     networks: [enricher-net]
+    restart: unless-stopped
 
   siem-demo:
     image: siem-enricher:0.2.0
@@ -246,8 +251,9 @@ services:
       - ./deploy/monitoring/prometheus.docker.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
     ports:
-      - "9090:9090"
+      - "9091:9090"
     networks: [enricher-net]
+    restart: unless-stopped
 
   grafana:
     image: grafana/grafana:11.2.0
@@ -259,12 +265,13 @@ services:
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
     ports:
-      - "3000:3000"
+      - "3001:3000"
     volumes:
       - grafana-data:/var/lib/grafana
       - ./deploy/monitoring/grafana-provisioning:/etc/grafana/provisioning:ro
       - ./deploy/monitoring/grafana-dashboard.json:/var/lib/grafana/dashboards/siem-enricher.json:ro
     networks: [enricher-net]
+    restart: unless-stopped
 
 volumes:
   state-data:
