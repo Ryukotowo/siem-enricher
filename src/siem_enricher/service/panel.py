@@ -1048,6 +1048,75 @@ def _pipeline_of(app: Any) -> Any:
     return pipeline
 
 
+RULES_HISTORY_DIR = "var/rules-history"
+RULES_KEEP = 10
+
+
+def snapshot_rules(config: Any) -> str | None:
+    """Сохранить копию файла правил перед перезагрузкой."""
+    from datetime import UTC, datetime
+
+    path = Path(str(getattr(config.ml, "rules_file", "") or ""))
+    if not path.exists():
+        return None
+    history = Path.cwd() / RULES_HISTORY_DIR
+    history.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now(tz=UTC).strftime("%Y%m%d-%H%M%S")
+    target = history / f"rules-{stamp}.json"
+    target.write_bytes(path.read_bytes())
+    saved = sorted(history.glob("rules-*.json"))
+    for old in saved[:-RULES_KEEP]:
+        old.unlink(missing_ok=True)
+    return target.name
+
+
+def rules_versions() -> list[dict[str, Any]]:
+    """Список сохранённых версий правил, новые первыми."""
+    history = Path.cwd() / RULES_HISTORY_DIR
+    if not history.exists():
+        return []
+    items = []
+    for path in sorted(history.glob("rules-*.json"), reverse=True):
+        items.append({"name": path.name, "size": path.stat().st_size})
+    return items
+
+
+def rollback_rules(config: Any, name: str) -> dict[str, Any]:
+    """Вернуть файл правил из сохранённой версии."""
+    history = Path.cwd() / RULES_HISTORY_DIR
+    source = history / Path(name).name
+    target = Path(str(getattr(config.ml, "rules_file", "") or ""))
+    if not source.exists():
+        return {"ok": False, "error": f"нет версии {name}"}
+    if not target.parent.exists():
+        return {"ok": False, "error": f"нет каталога {target.parent}"}
+    target.write_bytes(source.read_bytes())
+    return {"ok": True, "rules": str(target), "from": source.name}
+
+
+def reload_model(app: Any) -> dict[str, Any]:
+    """Пересобрать классификатор с активной версией модели из реестра."""
+    pipeline = _pipeline_of(app)
+    config = getattr(app.state, "config", None)
+    if pipeline is None or config is None:
+        return {"ok": False, "error": "сервис не запущен в режиме обработки"}
+    from siem_enricher.ml.classifier import build_classifier
+    from siem_enricher.ml.registry import ModelRegistry
+
+    fresh = build_classifier(config.ml, None, labels_path=config.labels_path)
+    pipeline.classifier = fresh
+    registry = ModelRegistry(current_tenant(config))
+    active = registry.active() or {}
+    _audit(app, {"kind": "model_reload", "key": "ml/artifact",
+                 "from": "-", "to": active.get("id") or getattr(fresh, "model_version", "unknown")})
+    return {
+        "ok": True,
+        "model_version": getattr(fresh, "model_version", "unknown"),
+        "artifact": active.get("artifact"),
+        "version": active.get("id"),
+    }
+
+
 def reload_rules(app: Any) -> dict[str, Any]:
     """Пересобрать классификатор по файлу правил без перезапуска сервиса."""
     pipeline = _pipeline_of(app)
@@ -1058,6 +1127,7 @@ def reload_rules(app: Any) -> dict[str, Any]:
         return {"ok": False, "error": "нет конфигурации"}
     from siem_enricher.ml.classifier import build_classifier
 
+    snapshot_rules(config)
     fresh = build_classifier(config.ml, None, labels_path=config.labels_path)
     pipeline.classifier = fresh
     directory_rules = getattr(getattr(fresh, "rules", fresh), "directory_rules", None)
@@ -1527,6 +1597,35 @@ def register_panel(app, buffer) -> bool:
         if errors:
             return JSONResponse({"errors": errors}, status_code=400)
         return JSONResponse({"record": record, "counts": read_labels(request.app)["counts"]})
+
+    @app.get("/ui/rules/versions", include_in_schema=False)
+    async def panel_rules_versions(request: Request) -> Any:
+        return JSONResponse({"versions": rules_versions()})
+
+    @app.post("/ui/rules/rollback", include_in_schema=False)
+    async def panel_rules_rollback(request: Request) -> Any:
+        request.app.state.audit_actor = (request.headers.get("X-Analyst")
+                                        or getattr(request.client, "host", "panel"))
+        try:
+            payload = await request.json()
+        except Exception:  # noqa: BLE001
+            payload = {}
+        name = str((payload or {}).get("version") or "")
+        result = rollback_rules(request.app.state.config, name)
+        if not result.get("ok"):
+            return JSONResponse(result, status_code=400)
+        reloaded = reload_rules(request.app)
+        result["reload"] = reloaded
+        _audit(request.app, {"kind": "rules_rollback", "key": "config/rules.json",
+                             "from": "-", "to": name})
+        return JSONResponse(result)
+
+    @app.post("/ui/model/reload", include_in_schema=False)
+    async def panel_model_reload(request: Request) -> Any:
+        request.app.state.audit_actor = (request.headers.get("X-Analyst")
+                                        or getattr(request.client, "host", "panel"))
+        result = reload_model(request.app)
+        return JSONResponse(result, status_code=200 if result.get("ok") else 400)
 
     @app.post("/ui/rules/reload", include_in_schema=False)
     async def panel_rules_reload(request: Request) -> Any:

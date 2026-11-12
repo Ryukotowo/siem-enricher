@@ -333,8 +333,29 @@ def resolve_artifact_path(path: str | Path, tenant: str | None = None) -> Path:
     if not base.exists():
         return Path(raw)
 
+    # реестр версий: активная версия важнее самого свежего каталога
+    try:
+        from siem_enricher.ml.registry import ModelRegistry
+
+        registry = ModelRegistry(tenant or "default", base)
+        active = registry.active()
+        if active:
+            candidate = registry.root / str(active["artifact"])
+            if (candidate / "config.json").exists():
+                return candidate.resolve()
+        active_dir = registry.active_path()
+        if (active_dir / "config.json").exists():
+            return active_dir.resolve()
+    except Exception:  # noqa: BLE001 - реестр не обязателен для работы
+        pass
+
+
     root = base
     if tenant and tenant != "default":
+        universal = base / "sensitivity_transformer"
+        scoped = base / tenant
+        if not scoped.exists() and (universal / "config.json").exists():
+            return universal.resolve()
         scoped = base / tenant
         if scoped.exists() and any(
             (item / "config.json").exists() for item in scoped.iterdir() if item.is_dir()

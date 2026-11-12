@@ -80,7 +80,7 @@ services:
     volumes:
       - ./var:/app/var
       - state-data:/app/var/state
-      - ./config:/app/config:ro
+      - ./config:/app/config
       - ./ml/artifacts:/app/ml/artifacts:ro
     depends_on:
       redpanda:
@@ -252,7 +252,7 @@ services:
        python /app/tools/seed_opensearch.py --url http://opensearch:9200 --verify
     volumes:
       - ./var:/app/var
-      - ./config:/app/config:ro
+      - ./config:/app/config
       - ./ml/artifacts:/app/ml/artifacts:ro
     networks: [enricher-net]
 

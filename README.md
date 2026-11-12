@@ -162,8 +162,28 @@ python tools/train_from_labels.py --input var/labels/dataset.jsonl
 если их не меньше 20, иначе на всём наборе с предупреждением.
 
 Чтобы применять принятую модель без правки конфигурации, задайте
-`ml.artifact_path: "auto"` — сервис возьмёт самый свежий рабочий артефакт
-(каталоги `*.rejected` пропускаются).
+`ml.artifact_path: "auto"` — сервис берёт активную версию из реестра
+`ml/artifacts/versions.json` (каталоги `*.rejected` и старые версии не
+используются). Переключить модель без перезапуска:
+
+```bash
+curl -X POST http://localhost:8081/ui/model/reload
+# {"ok":true,"version":"v20261112-094018","artifact":"versions/v20261112-094018"}
+```
+
+После отката достаточно вызвать тот же адрес — сервис перечитает реестр.
+
+### Версии правил
+
+Перед каждой перезагрузкой правил сохраняется снимок в `var/rules-history/`
+(последние 10). Список и откат:
+
+```bash
+curl http://localhost:8081/ui/rules/versions
+curl -X POST http://localhost:8081/ui/rules/rollback \
+     -H 'Content-Type: application/json' \
+     -d '{"version": "rules-20261112-100207.json"}'
+```
 
 Обучение намеренно вынесено из сервиса: экземпляр только собирает разметку,
 а обучение требует валидации и решения о промоушене артефакта.
