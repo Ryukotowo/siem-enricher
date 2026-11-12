@@ -20,6 +20,7 @@ DEFAULTS: dict[str, Any] = {
         "environment": "dev",
         "log_level": "INFO",
         "log_format": "json",
+        "tenant": "default",
     },
     "source": {"type": "file_replay", "options": {}},
     "sink": {"type": "file_jsonl", "options": {"path": "var/enriched_events.jsonl"}},
@@ -165,6 +166,7 @@ class ServiceConfig:
     environment: str = "dev"
     log_level: str = "INFO"
     log_format: str = "json"
+    tenant: str = "default"
 
 
 @dataclass(slots=True)

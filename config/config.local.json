@@ -5,7 +5,8 @@
     "instance_id": "enricher-local-demo",
     "environment": "dev",
     "log_level": "INFO",
-    "log_format": "human"
+    "log_format": "human",
+    "tenant": "default"
   },
   "source": {
     "type": "file_replay",
@@ -30,7 +31,11 @@
     "max_files_per_event": 32,
     "max_users_per_event": 8,
     "drop_system_paths": false,
-    "system_path_prefixes": ["c:\\windows\\", "/proc/", "/sys/"],
+    "system_path_prefixes": [
+      "c:\\windows\\",
+      "/proc/",
+      "/sys/"
+    ],
     "aliases": {},
     "scan_embedded_paths": true,
     "max_embedded_paths": 8
@@ -62,10 +67,19 @@
     "sqlite_path": "var/state/provenance.db",
     "ttl_seconds": 604800,
     "max_chain_depth": 16,
-    "external_actions": ["upload", "send", "post", "webhook"]
+    "external_actions": [
+      "upload",
+      "send",
+      "post",
+      "webhook"
+    ]
   },
   "risk": {
-    "thresholds": { "medium": 0.3, "high": 0.6, "critical": 0.85 },
+    "thresholds": {
+      "medium": 0.3,
+      "high": 0.6,
+      "critical": 0.85
+    },
     "weights": {
       "sensitivity": 0.45,
       "confidence": 0.15,

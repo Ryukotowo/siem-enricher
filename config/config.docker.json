@@ -5,7 +5,8 @@
     "instance_id": "${SIEM_ENRICHER_INSTANCE_ID:-enricher-docker-1}",
     "environment": "docker",
     "log_level": "${SIEM_ENRICHER_LOG_LEVEL:-INFO}",
-    "log_format": "json"
+    "log_format": "json",
+    "tenant": "default"
   },
   "source": {
     "type": "kafka",

@@ -311,7 +311,13 @@ def _build_classifier(
     return rules
 
 
-def resolve_artifact_path(path: str | Path) -> Path:
+def current_tenant_from_ml(config: Any) -> str:
+    """Организация для выбора артефакта (по конфигурации сервиса)."""
+    service = getattr(config, "service", None) or getattr(config, "_service", None)
+    return str(getattr(service, "tenant", "default") or "default")
+
+
+def resolve_artifact_path(path: str | Path, tenant: str | None = None) -> Path:
     """Выбрать артефакт модели.
 
     Значение ``auto`` означает «самый свежий рабочий артефакт»: каталог модели
@@ -323,7 +329,17 @@ def resolve_artifact_path(path: str | Path) -> Path:
     if raw.lower() != "auto":
         return Path(raw)
 
-    root = Path.cwd() / "ml" / "artifacts"
+    base = Path.cwd() / "ml" / "artifacts"
+    if not base.exists():
+        return Path(raw)
+
+    root = base
+    if tenant and tenant != "default":
+        scoped = base / tenant
+        if scoped.exists() and any(
+            (item / "config.json").exists() for item in scoped.iterdir() if item.is_dir()
+        ):
+            root = scoped
     if not root.exists():
         return Path(raw)
     candidates = [
@@ -345,7 +361,7 @@ def _build_transformer(
 ) -> TransformerSensitivityClassifier:
     """Загрузить трансформер-классификатор из чекпоинта."""
     return TransformerSensitivityClassifier(
-        model_path=str(resolve_artifact_path(config.artifact_path)),
+        model_path=str(resolve_artifact_path(config.artifact_path, current_tenant_from_ml(config))),
         category_map=category_map,
         label_encoder_file=config.label_encoder_file,
         max_length=config.max_length,

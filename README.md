@@ -60,6 +60,37 @@ curl -X POST http://localhost:8081/ui/rules/reload -H "X-Analyst: admin"
 
 Путь к файлу задаётся в конфигурации: `ml.rules_file` (по умолчанию `config/rules.json`).
 
+## Несколько организаций на одном сервисе
+
+Организация задаётся в конфигурации:
+
+```json
+{"service": {"tenant": "org1"}}
+```
+
+Имя нормализуется (кириллица сохраняется, пробелы заменяются на дефис).
+Значение `default` — общий режим, совместимый с прежним поведением.
+
+Что разделяется:
+
+| Данные | Расположение при `tenant: org1` |
+|---|---|
+| метки аналитика | `var/labels/org1/analyst_labels.jsonl` |
+| настройки панели | `var/runtime-settings-org1.json` |
+| дообученная модель | `ml/artifacts/org1/sensitivity_feedback` |
+| отчёт об обучении | `var/labels/org1/training_report.json` |
+
+Правила и политики общие (`config/rules.json`, `config/policies.json`), но каждая
+организация поднимает свой экземпляр сервиса со своей конфигурацией. При значении
+`ml.artifact_path: "auto"` модель берётся из каталога своей организации, а если там
+пусто — из общего.
+
+Обучение для организации:
+
+```bash
+python tools/train_from_labels.py --input var/labels/org1/dataset.jsonl --tenant org1
+```
+
 ## Обратная связь и дообучение
 
 Метки аналитика (подтверждение / ложное срабатывание) сохраняются в `var/labels/analyst_labels.jsonl`.

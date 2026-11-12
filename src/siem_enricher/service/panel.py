@@ -1138,16 +1138,34 @@ def read_audit_tail(app: Any, limit: int = 40) -> list[dict[str, Any]]:
     return records[-limit:][::-1]
 
 
+def current_tenant(config: Any) -> str:
+    """Идентификатор организации из конфигурации (``default`` — общий режим)."""
+    import re
+
+    service = getattr(config, "service", None)
+    raw = str(getattr(service, "tenant", "default") or "default").strip().lower()
+    cleaned = re.sub(r"[^\w.-]+", "-", raw, flags=re.UNICODE).strip("-.")
+    return cleaned or "default"
+
+
 LABELS_FILE = "var/labels/analyst_labels.jsonl"
 LABEL_LEVELS = ("public", "internal", "confidential", "secret")
 
 LABEL_VALUES = {"confirmed": "инцидент подтверждён", "false_positive": "ложное срабатывание"}
 
 
-def _labels_path() -> Any:
+def _labels_path(app: Any = None) -> Any:
+    """Файл меток организации: у каждой свой каталог."""
     from pathlib import Path as _Path
 
-    path = _Path.cwd() / LABELS_FILE
+    tenant = "default"
+    config = getattr(getattr(app, "state", None), "config", None) if app is not None else None
+    if config is not None:
+        tenant = current_tenant(config)
+    if tenant == "default":
+        path = _Path.cwd() / LABELS_FILE
+    else:
+        path = _Path.cwd() / "var" / "labels" / tenant / "analyst_labels.jsonl"
     path.parent.mkdir(parents=True, exist_ok=True)
     return path
 
@@ -1195,7 +1213,7 @@ def save_label(app: Any, payload: dict[str, Any]) -> tuple[dict[str, Any] | None
         service_metrics().analyst_labels.inc({"label": label})
     except Exception:  # noqa: BLE001
         pass
-    with _labels_path().open("a", encoding="utf-8") as handle:
+    with _labels_path(app).open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(record, ensure_ascii=False) + "\n")
     return record, []
 
@@ -1234,7 +1252,7 @@ def read_labels(app: Any, limit: int = 200) -> dict[str, Any]:
     """Последние метки и сводка по ним."""
     import json
 
-    path = _labels_path()
+    path = _labels_path(app)
     records: list[dict[str, Any]] = []
     if path.exists():
         for line in path.read_text(encoding="utf-8").splitlines():
@@ -1361,7 +1379,7 @@ def apply_settings(app: Any, payload: dict[str, Any]) -> tuple[list[str], list[s
         errors.append("размер пачки должен быть целым")
 
     if applied:
-        persist_settings(merged, {rule["id"]: rule["enabled"] for rule in read_rules(app)})
+        persist_settings(merged, {rule["id"]: rule["enabled"] for rule in read_rules(app)}, app=app)
         for key in merged:
             if key in current and str(current[key]) != str(merged[key]):
                 _audit(app, {"kind": "config_change", "key": key,
@@ -1372,35 +1390,42 @@ def apply_settings(app: Any, payload: dict[str, Any]) -> tuple[list[str], list[s
 SETTINGS_FILE = "var/runtime-settings.json"
 
 
-def _settings_path() -> Path:
+def _settings_path(app: Any = None) -> Path:
+    """Файл настроек организации: у каждой свой."""
     from pathlib import Path
 
-    candidate = Path.cwd() / SETTINGS_FILE
+    tenant = "default"
+    config = getattr(getattr(app, "state", None), "config", None) if app is not None else None
+    if config is not None:
+        tenant = current_tenant(config)
+    name = SETTINGS_FILE if tenant == "default" else f"var/runtime-settings-{tenant}.json"
+    candidate = Path.cwd() / name
     candidate.parent.mkdir(parents=True, exist_ok=True)
     return candidate
 
 
-def persist_settings(values: dict[str, Any], rules: dict[str, Any] | None = None) -> None:
+def persist_settings(values: dict[str, Any], rules: dict[str, Any] | None = None,
+                     app: Any = None) -> None:
     """Сохранить действующие параметры и состояние правил, чтобы пережить перезапуск."""
     import json
 
     payload = {"values": values, "rules": rules or {}}
     try:
-        _settings_path().write_text(
+        _settings_path(app).write_text(
             json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
         )
     except OSError:
         pass
 
 
-def restore_settings(app: Any) -> list[str]:
+def restore_settings(app: Any = None) -> list[str]:
     """Один раз применить параметры, сохранённые в прошлый раз."""
     if getattr(app.state, "settings_restored", False):
         return []
     app.state.settings_restored = True
     import json
 
-    path = _settings_path()
+    path = _settings_path(app)
     if not path.exists():
         return []
     try:

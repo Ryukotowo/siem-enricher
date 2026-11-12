@@ -22,8 +22,10 @@ for candidate in (ROOT / "src", ROOT):
         sys.path.insert(0, str(candidate))
 
 BASE_ARTIFACT = ROOT / "ml" / "artifacts" / "sensitivity_transformer"
-OUTPUT_ARTIFACT = ROOT / "ml" / "artifacts" / "sensitivity_feedback"
-REJECTED_ARTIFACT = ROOT / "ml" / "artifacts" / "sensitivity_feedback.rejected"
+DEFAULT_OUTPUT = ROOT / "ml" / "artifacts" / "sensitivity_feedback"
+DEFAULT_REJECTED = ROOT / "ml" / "artifacts" / "sensitivity_feedback.rejected"
+OUTPUT_ARTIFACT = DEFAULT_OUTPUT
+REJECTED_ARTIFACT = DEFAULT_REJECTED
 REGRESSION_SET = ROOT / "ml" / "regression_set.jsonl"
 REPORT = ROOT / "var" / "labels" / "training_report.json"
 LEVELS = ["public", "internal", "confidential", "secret"]
@@ -151,9 +153,19 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Дообучение по меткам аналитиков")
     parser.add_argument("--input", required=True, help="JSONL из /ui/labels/export")
     parser.add_argument("--dry-run", action="store_true", help="только проверить датасет")
+    parser.add_argument("--tenant", default=None,
+                        help="организация: артефакт и отчёт попадут в её каталог")
     parser.add_argument("--min-gain", type=float, default=-0.02,
                         help="допустимое падение F1 на отложенной выборке и на регрессии")
     args = parser.parse_args()
+
+    global OUTPUT_ARTIFACT, REJECTED_ARTIFACT, REPORT
+    tenant = (args.tenant or "default").strip().lower() or "default"
+    if tenant != "default":
+        OUTPUT_ARTIFACT = ROOT / "ml" / "artifacts" / tenant / "sensitivity_feedback"
+        REJECTED_ARTIFACT = ROOT / "ml" / "artifacts" / tenant / "sensitivity_feedback.rejected"
+        REPORT = ROOT / "var" / "labels" / tenant / "training_report.json"
+        print(f"организация: {tenant}")
 
     rows = load_jsonl(Path(args.input))
     strong = [row for row in rows if row.get("strength") == "strong"]
