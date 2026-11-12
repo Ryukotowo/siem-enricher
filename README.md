@@ -29,6 +29,29 @@ ruff check src tests
 python -m unittest discover -s tests -t .
 ```
 
+## Обратная связь и дообучение
+
+Метки аналитика (подтверждение / ложное срабатывание) сохраняются в `var/labels/analyst_labels.jsonl`.
+
+```bash
+# 1. выгрузить датасет из меток
+curl -s http://localhost:8080/ui/labels/export -o var/labels/dataset.jsonl
+
+# 2. проверить, что данных достаточно
+python tools/train_from_labels.py --input var/labels/dataset.jsonl --dry-run
+
+# 3. дообучить и сравнить с текущей моделью
+python tools/train_from_labels.py --input var/labels/dataset.jsonl
+```
+
+Скрипт делит набор на обучающую и отложенную выборки, дообучает модель от текущего
+артефакта и сохраняет результат в `ml/artifacts/sensitivity_feedback` **только если**
+F1 на отложенной выборке не хуже текущего более чем на 0,02. Отчёт пишется в
+`var/labels/training_report.json`.
+
+Обучение намеренно вынесено из сервиса: экземпляр только собирает разметку,
+а обучение требует валидации и решения о промоушене артефакта.
+
 ## Состав (7 модулей)
 
 | № | Модуль | Код |

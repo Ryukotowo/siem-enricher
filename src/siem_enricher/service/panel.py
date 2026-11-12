@@ -488,6 +488,14 @@ function labelBlock(event) {
     <div class="v">
       <input id="label-comment" placeholder="комментарий (необязательно)" value="${comment.replaceAll('"', '&quot;')}"
              style="width:100%;padding:5px 8px;border:1px solid #DCE3EE;border-radius:6px;font-size:12px">
+      <select id="label-true-level" style="margin-top:6px;width:100%;padding:5px 8px;font-size:12px;
+              border:1px solid #DCE3EE;border-radius:6px">
+        <option value="">класс определён верно</option>
+        <option value="public">на самом деле public</option>
+        <option value="internal">на самом деле internal</option>
+        <option value="confidential">на самом деле confidential</option>
+        <option value="secret">на самом деле secret</option>
+      </select>
       <div style="margin-top:6px;display:flex;gap:8px">
         <button class="chain-btn" onclick="labelEvent('${event.event_id}', 'confirmed')">подтвердить</button>
         <button class="chain-btn" onclick="labelEvent('${event.event_id}', 'false_positive')">ложное</button>
@@ -517,8 +525,12 @@ async function labelEvent(eventId, label) {
     const response = await fetch('/ui/label', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({event_id: eventId, label, comment: commentBox ? commentBox.value : '',
-                            file: event.file, decision: event.decision, risk: event.risk})
+      body: JSON.stringify({event_id: eventId, label,
+                            comment: commentBox ? commentBox.value : '',
+                            file: event.file, path: event.path, directory: event.directory,
+                            level: event.sensitivity,
+                            true_level: (document.getElementById('label-true-level') || {}).value || '',
+                            decision: event.decision, risk: event.risk})
     });
     const payload = await response.json();
     if (!response.ok) throw new Error((payload.errors || []).join('; '));
@@ -1085,6 +1097,8 @@ def read_audit_tail(app: Any, limit: int = 40) -> list[dict[str, Any]]:
 
 
 LABELS_FILE = "var/labels/analyst_labels.jsonl"
+LABEL_LEVELS = ("public", "internal", "confidential", "secret")
+
 LABEL_VALUES = {"confirmed": "инцидент подтверждён", "false_positive": "ложное срабатывание"}
 
 
@@ -1111,11 +1125,23 @@ def save_label(app: Any, payload: dict[str, Any]) -> tuple[dict[str, Any] | None
     if errors:
         return None, errors
 
+    predicted = str(payload.get("level") or "").strip() or None
+    if predicted is not None and predicted not in LABEL_LEVELS:
+        predicted = None
+    true_level = str(payload.get("true_level") or "").strip() or None
+    if true_level is not None and true_level not in LABEL_LEVELS:
+        errors.append("верный класс должен быть одним из: public, internal, confidential, secret")
+        return None, errors
+
     record = {
         "event_id": event_id,
         "label": label,
         "comment": str(payload.get("comment") or "").strip()[:500],
         "file": str(payload.get("file") or ""),
+        "path": str(payload.get("path") or ""),
+        "directory": str(payload.get("directory") or ""),
+        "predicted_level": predicted,
+        "true_level": true_level,
         "decision": str(payload.get("decision") or ""),
         "risk": payload.get("risk"),
         "actor": str(getattr(app.state, "audit_actor", "analyst")),
@@ -1130,6 +1156,34 @@ def save_label(app: Any, payload: dict[str, Any]) -> tuple[dict[str, Any] | None
     with _labels_path().open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(record, ensure_ascii=False) + "\n")
     return record, []
+
+
+def export_training_rows(app: Any) -> list[dict[str, Any]]:
+    """Собрать строки датасета из меток: путь -> верный класс.
+
+    Целевой класс берётся из явной правки аналитика, а при подтверждении —
+    из предсказания модели на момент разметки.
+    """
+    rows: dict[str, dict[str, Any]] = {}
+    for record in reversed(read_labels(app, limit=100000)["records"]):
+        path = str(record.get("path") or "").strip()
+        if not path:
+            continue
+        target = record.get("true_level")
+        if target is None and record.get("label") == "confirmed":
+            target = record.get("predicted_level")
+        if target not in LABEL_LEVELS:
+            continue
+        rows[path.lower()] = {
+            "path": path,
+            "name": record.get("file") or path.rsplit("\\", 1)[-1],
+            "level": target,
+            "event_id": record.get("event_id"),
+            "label": record.get("label"),
+            "actor": record.get("actor"),
+            "ts": record.get("ts"),
+        }
+    return list(rows.values())
 
 
 def read_labels(app: Any, limit: int = 200) -> dict[str, Any]:
@@ -1404,6 +1458,15 @@ def register_panel(app, buffer) -> bool:
         if errors:
             return JSONResponse({"errors": errors}, status_code=400)
         return JSONResponse({"record": record, "counts": read_labels(request.app)["counts"]})
+
+    @app.get("/ui/labels/export", include_in_schema=False)
+    async def panel_labels_export(request: Request) -> Any:
+        from fastapi.responses import Response
+
+        rows = export_training_rows(request.app)
+        body = "\n".join(json.dumps(row, ensure_ascii=False) for row in rows) + "\n"
+        return Response(content=body, media_type="application/jsonl",
+                        headers={"Content-Disposition": "attachment; filename=labels_dataset.jsonl"})
 
     @app.get("/ui/labels", include_in_schema=False)
     async def panel_labels(request: Request, limit: int = 200) -> Any:
