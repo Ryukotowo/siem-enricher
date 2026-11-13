@@ -255,6 +255,7 @@ class HttpConfig:
     host: str = "0.0.0.0"
     port: int = 8080
     metrics_port: int = 9101
+    api_key: str = ""
 
 
 @dataclass(slots=True)

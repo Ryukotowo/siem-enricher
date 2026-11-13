@@ -192,7 +192,7 @@ curl -X POST http://localhost:8081/ui/state/rollback -d '{"state":"s2026..."}'  
 
 ```bash
 # 1. выгрузить датасет из меток
-curl -s http://localhost:8080/ui/labels/export -o var/labels/dataset.jsonl
+curl -s http://localhost:8081/ui/labels/export -o var/labels/dataset.jsonl
 
 # 2. проверить, что данных достаточно
 python tools/train_from_labels.py --input var/labels/dataset.jsonl --dry-run
@@ -239,6 +239,28 @@ curl -X POST http://localhost:8081/ui/rules/rollback \
 
 Обучение намеренно вынесено из сервиса: экземпляр только собирает разметку,
 а обучение требует валидации и решения о промоушене артефакта.
+
+## Доступ к изменяющим запросам
+
+Если в конфигурации задан ключ, все изменяющие запросы требуют заголовок
+`X-API-Key`:
+
+```json
+{"http": {"api_key": "длинный-случайный-ключ"}}
+```
+
+```bash
+curl -X POST http://localhost:8081/ui/rules/reload -H "X-API-Key: $SIEM_KEY"
+
+# без ключа
+curl -X POST http://localhost:8081/ui/rules/reload
+# {"detail": "требуется заголовок X-API-Key"}
+```
+
+Чтение (панель, события, метрики, `/healthz`, `/readyz`) остаётся открытым, чтобы
+мониторинг не зависел от ключа. Сравнение выполняется в постоянное время.
+Если ключ не задан, сервис пишет предупреждение в журнал при старте: режим без
+аутентификации допустим только в изолированном контуре.
 
 ## Состав (7 модулей)
 

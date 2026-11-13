@@ -18,6 +18,40 @@ from siem_enricher.version import VERSION
 logger = get_logger("service.app")
 
 
+def _install_api_key_guard(app: Any, config: AppConfig) -> None:
+    """Требовать X-API-Key для изменяющих запросов, если ключ задан.
+
+    Чтение панели, метрики и проверки состояния остаются открытыми, чтобы
+    мониторинг и просмотр не зависели от ключа.
+    """
+    expected = str(getattr(config.http, "api_key", "") or "")
+    if not expected:
+        logger.warning("HTTP API-ключ не задан: изменяющие запросы открыты")
+        return
+
+    import hmac
+
+    from fastapi.responses import JSONResponse
+
+    open_paths = {"/healthz", "/readyz", "/ui", "/ui/stream", "/metrics"}
+    open_prefixes = ("/ui/events", "/ui/audit", "/ui/labels", "/ui/state", "/ui/rules/versions")
+
+    @app.middleware("http")
+    async def api_key_guard(request: Any, call_next: Any) -> Any:
+        method = request.method.upper()
+        path = request.url.path
+        protected = method in {"POST", "PUT", "PATCH", "DELETE"}
+        if protected and path not in open_paths and not path.startswith(open_prefixes):
+            provided = request.headers.get("X-API-Key", "")
+            if not hmac.compare_digest(provided, expected):
+                return JSONResponse({"detail": "требуется заголовок X-API-Key"}, status_code=401)
+        return await call_next(request)
+
+def _noop() -> None:
+    """Заглушка, чтобы сохранить структуру модуля."""
+
+
+
 def create_app(
     config: AppConfig,
     pipeline: EnrichmentPipeline | None = None,
@@ -78,6 +112,7 @@ def create_app(
     if register_panel(app, panel_buffer):
         pipeline.add_observer(panel_buffer.add)
         logger.info("Панель аналитика доступна по адресу /ui (обновляется по мере потока)")
+    _install_api_key_guard(app, config)
     app.include_router(routes.router)
     logger.info(
         "HTTP-сервис обогащения создан",
