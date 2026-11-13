@@ -1195,7 +1195,11 @@ async def demo_start(app: Any, interval: float = 2.0, scenario: str = "mixed") -
     state.update({"running": True, "interval": interval, "scenario": scenario, "sent": 0})
 
     async def loop() -> None:
-        for event in stream_events(scenario=scenario, interval=0, repeat=0):
+        from datetime import UTC, datetime
+
+        started = datetime.now(tz=UTC).replace(microsecond=0)
+        for event in stream_events(scenario=scenario, interval=0, repeat=0,
+                                   start=started):
             if not state["running"]:
                 break
             _, _, document = pipeline.enrich_document("demo", event)

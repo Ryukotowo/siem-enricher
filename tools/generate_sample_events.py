@@ -230,13 +230,20 @@ def stream_events(
     ``repeat=0`` означает бесконечный поток, ``interval`` — пауза между событиями.
     """
     import time
+    from datetime import timedelta
 
+    base = start or datetime.now(timezone.utc).replace(microsecond=0)
     attempt = 0
     while True:
         attempt += 1
+        # каждый следующий повтор сдвигаем время, иначе идентификаторы совпадут
+        chunk_start = base + timedelta(seconds=(attempt - 1) * max(1, count or 1))
         chunk = build_events(scenario=scenario, count=count, seed=seed + attempt - 1,
-                             start=start, host=host)
-        for event in chunk:
+                             start=chunk_start, host=host)
+        for position, event in enumerate(chunk, 1):
+            # идентификатор содержит фиксированную метку времени, поэтому в потоке
+            # делаем её уникальной для каждого повтора
+            event["id"] = f"{1700000000 + attempt}.{position:06d}"
             if interval > 0:
                 time.sleep(interval)
             yield event
