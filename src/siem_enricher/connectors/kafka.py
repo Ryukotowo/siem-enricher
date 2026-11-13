@@ -141,6 +141,8 @@ class KafkaSink(SinkConnector):
         self.topic = str(self._option("topic", "siem.enriched.events"))
         self.acks = str(self._option("acks", "all"))
         self.linger_ms = int(self._option("linger_ms", 20))
+        # False — не ждать подтверждения на каждом сообщении, а сбрасывать пачкой
+        self.wait_ack = bool(self._option("wait_ack", True))
         self.max_document_bytes = int(self._option("max_document_bytes", 900_000))
         self._oversize_warned = False
         self._producer: Any = None
@@ -161,6 +163,17 @@ class KafkaSink(SinkConnector):
         self._started = True
         logger.info("Приёмник Kafka готов", extra={"topic": self.topic})
 
+    async def flush(self) -> bool:
+        if self._producer is None:
+            return True
+        try:
+            await self._producer.flush()
+            return True
+        except Exception as exc:  # noqa: BLE001
+            logger.error("Ошибка сброса буфера Kafka", extra={"topic": self.topic,
+                                                             "reason": str(exc)})
+            return False
+
     async def send(self, document: dict[str, Any]) -> bool:
         if self._producer is None:
             await self.start()
@@ -176,8 +189,11 @@ class KafkaSink(SinkConnector):
                                "limit": self.max_document_bytes},
                     )
                     self._oversize_warned = True
-            await self._producer.send_and_wait(self.topic, payload,
-                                               key=str(document.get("event_id")).encode())
+            key = str(document.get("event_id")).encode()
+            if self.wait_ack:
+                await self._producer.send_and_wait(self.topic, payload, key=key)
+            else:
+                await self._producer.send(self.topic, payload, key=key)
         except Exception as exc:  # noqa: BLE001
             logger.error("Ошибка отправки в Kafka", extra={"topic": self.topic, "reason": str(exc)})
             if self.metrics is not None:

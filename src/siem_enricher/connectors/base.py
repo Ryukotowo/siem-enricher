@@ -116,6 +116,7 @@ class SinkConnector(Connector):
         for document in documents:
             if await self.send(document):
                 sent += 1
+        await self.flush()
         return sent
 
     async def flush(self) -> bool:

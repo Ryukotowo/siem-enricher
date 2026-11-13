@@ -29,7 +29,8 @@
           "options": {
             "bootstrap_servers": "${KAFKA_BOOTSTRAP:-kafka:9092}",
             "topic": "${KAFKA_OUTPUT_TOPIC:-siem.enriched.events}",
-            "acks": "all"
+            "acks": "all",
+            "wait_ack": false
           }
         },
         {
