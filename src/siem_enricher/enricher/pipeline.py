@@ -116,100 +116,141 @@ class EnrichmentPipeline:
 
     def enrich(self, event: NormalizedEvent, apply_policies: bool = True) -> EnrichedEvent:
         """Обогатить нормализованное событие."""
+        per_file = self._classify_event(event)
+        return self._assemble(event, per_file, apply_policies=apply_policies)
+
+    def enrich_batch(self, events: Sequence[NormalizedEvent],
+                     apply_policies: bool = True) -> list[EnrichedEvent]:
+        """Обогатить пачку событий, классифицируя имена одним батчем.
+
+        Классификатор получает имена всей пачки сразу — это основной выигрыш;
+        происхождение, риск и политики считаются по одному событию в исходном
+        порядке, поэтому цепочки не перемешиваются.
+        """
+        if not events:
+            return []
+        targets: list[str] = []
+        spans: list[tuple[int, int]] = []
+        for event in events:
+            paths = [f.path for f in event.files]
+            spans.append((len(targets), len(targets) + len(paths)))
+            targets.extend(paths)
+
+        assessments: list[SensitivityAssessment] = []
+        if targets:
+            try:
+                assessments = list(self.classifier.predict_many(targets))
+            except Exception as exc:  # noqa: BLE001 - падение классификатора не теряет события
+                logger.error("Ошибка пакетной классификации", extra={"reason": str(exc)})
+                assessments = []
+
+        results: list[EnrichedEvent] = []
+        for event, (start, end) in zip(events, spans):
+            chunk = assessments[start:end] if len(assessments) >= end else []
+            results.append(self._assemble(event, chunk, apply_policies=apply_policies))
+        return results
+
+    def _classify_event(self, event: NormalizedEvent) -> list[SensitivityAssessment]:
+        """Классифицировать файлы одного события."""
+        with event_context(event.event_id):
+            per_file: list[SensitivityAssessment] = []
+            if not event.files:
+                return per_file
+            # объект на съёмном носителе не характеризует защищаемый объект:
+            # классифицируем исходный путь, если он есть
+            from siem_enricher.extractor.patterns import is_removable_path
+
+            targets = [f.path for f in event.files if not is_removable_path(f.path)]
+            try:
+                per_file = list(self.classifier.predict_many(targets or [f.path for f in event.files]))
+            except Exception as exc:  # noqa: BLE001 - сбой классификатора не теряет событие
+                logger.error("Ошибка классификации конфиденциальности", extra={"reason": str(exc)})
+                self.metrics.ml_fallback.inc({"reason": "classification_error"})
+            return per_file
+
+    def _assemble(
+        self,
+        event: NormalizedEvent,
+        per_file: Sequence[SensitivityAssessment],
+        apply_policies: bool = True,
+    ) -> EnrichedEvent:
+        """Собрать результат обогащения по готовым оценкам классификатора."""
         started = time.perf_counter()
         warnings: list[str] = []
+        sensitivity = self._aggregate(per_file) if per_file else self._no_files_assessment()
+        if not event.files:
+            warnings.append("в событии не обнаружено файлов-объектов: классификация не выполнялась")
 
-        with event_context(event.event_id):
-            # 1. Классификация конфиденциальности объектов события
-            per_file: list[SensitivityAssessment] = []
-            if event.files:
-                # объект на съёмном носителе — это место назначения копии, его имя не
-                # характеризует защищаемые данные: классифицируем источник
-                from siem_enricher.extractor.patterns import is_removable_path
+        for assessment in per_file:
+            self.metrics.classified.inc({"level": assessment.level.value, "method": assessment.method})
+        # 2. Цепочки происхождения
+        try:
+            self.builder.record(event)
+            chains = self.builder.chains_for(event)
+        except Exception as exc:  # noqa: BLE001
+            logger.error("Ошибка построения цепочки происхождения", extra={"reason": str(exc)})
+            warnings.append(f"ошибка provenance: {exc}")
+            chains = []
 
-                targets = [f.path for f in event.files if not is_removable_path(f.path)]
-                try:
-                    per_file = self.classifier.predict_many(targets or [f.path for f in event.files])
-                except Exception as exc:  # noqa: BLE001 - сбой классификатора не должен терять событие
-                    logger.error("Ошибка классификации конфиденциальности", extra={"reason": str(exc)})
-                    warnings.append(f"ошибка классификации: {exc}")
-                    self.metrics.ml_fallback.inc({"reason": "classification_error"})
-                sensitivity = self._aggregate(per_file) if per_file else self._no_files_assessment()
-            else:
-                sensitivity = self._no_files_assessment()
-                warnings.append("в событии не обнаружены объекты-файлы: классификация не выполнялась")
+        # 3. Оценка риска
+        risk = self.scorer.score(event, sensitivity, chains, files_count=len(event.files))
+        self.metrics.risk_score.observe(risk.score)
+        self.metrics.risk_severity.inc({"severity": risk.severity.value})
+        if chains:
+            self.metrics.provenance_depth.observe(max(chain.depth for chain in chains))
 
-            for assessment in per_file:
-                self.metrics.classified.inc({"level": assessment.level.value, "method": assessment.method})
+        # 4. Применение политик
+        result = EnrichmentResult(
+            sensitivity=sensitivity,
+            per_file=per_file,
+            chains=chains,
+            risk=risk,
+            enriched_at=utcnow(),
+            duration_ms=0.0,
+            enricher_version=VERSION,
+            schema_version=ENRICHMENT_SCHEMA_VERSION,
+            warnings=list(warnings),
+        )
+        enriched = EnrichedEvent(event=event, enrichment=result)
+        document = enriched.to_siem_document()
 
-            # 2. Цепочки происхождения
+        if self.policy_engine is not None:
             try:
-                self.builder.record(event)
-                chains = self.builder.chains_for(event)
+                evaluation = self.policy_engine.evaluate(document, apply_actions=apply_policies)
             except Exception as exc:  # noqa: BLE001
-                logger.error("Ошибка построения цепочки происхождения", extra={"reason": str(exc)})
-                warnings.append(f"ошибка provenance: {exc}")
-                chains = []
+                logger.error("Ошибка применения политик", extra={"reason": str(exc)})
+                warnings.append(f"ошибка применения политик: {exc}")
+            else:
+                self._attach_policy_result(result, document, evaluation)
+                result.policy_decision = evaluation.decision
 
-            # 3. Оценка риска
-            risk = self.scorer.score(event, sensitivity, chains, files_count=len(event.files))
-            self.metrics.risk_score.observe(risk.score)
-            self.metrics.risk_severity.inc({"severity": risk.severity.value})
-            if chains:
-                self.metrics.provenance_depth.observe(max(chain.depth for chain in chains))
+        # 5. Итоговые служебные поля
+        result.duration_ms = (time.perf_counter() - started) * 1000.0
+        result.warnings = warnings
+        document["enrichment"]["duration_ms"] = round(result.duration_ms, 3)
+        document["enrichment"]["masked_fields"] = list(result.masked_fields)
+        document["enrichment"]["warnings"] = list(warnings)
+        document["risk_score"] = round(risk.score, 4)
+        document["risk_severity"] = risk.severity.value
+        enriched.document = document
 
-            # 4. Применение политик
-            result = EnrichmentResult(
-                sensitivity=sensitivity,
-                per_file=per_file,
-                chains=chains,
-                risk=risk,
-                enriched_at=utcnow(),
-                duration_ms=0.0,
-                enricher_version=VERSION,
-                schema_version=ENRICHMENT_SCHEMA_VERSION,
-                warnings=list(warnings),
-            )
-            enriched = EnrichedEvent(event=event, enrichment=result)
-            document = enriched.to_siem_document()
-
-            if self.policy_engine is not None:
-                try:
-                    evaluation = self.policy_engine.evaluate(document, apply_actions=apply_policies)
-                except Exception as exc:  # noqa: BLE001
-                    logger.error("Ошибка применения политик", extra={"reason": str(exc)})
-                    warnings.append(f"ошибка применения политик: {exc}")
-                else:
-                    self._attach_policy_result(result, document, evaluation)
-                    result.policy_decision = evaluation.decision
-
-            # 5. Итоговые служебные поля
-            result.duration_ms = (time.perf_counter() - started) * 1000.0
-            result.warnings = warnings
-            document["enrichment"]["duration_ms"] = round(result.duration_ms, 3)
-            document["enrichment"]["masked_fields"] = list(result.masked_fields)
-            document["enrichment"]["warnings"] = list(warnings)
-            document["risk_score"] = round(risk.score, 4)
-            document["risk_severity"] = risk.severity.value
-            enriched.document = document
-
-            self.metrics.enrichment_duration.observe(result.duration_ms / 1000.0)
-            self.metrics.events_enriched.inc({"status": "ok"})
-            self.metrics.decisions.inc({"decision": result.policy_decision.value})
-            logger.info(
-                "Событие обогащено",
-                extra={
-                    "sensitivity": sensitivity.level.value,
-                    "risk_score": risk.score,
-                    "risk_severity": risk.severity.value,
-                    "provenance_depth": result.provenance_depth,
-                    "policy_decision": result.policy_decision.value,
-                    "rules": [p.rule_id for p in result.policies],
-                    "duration_ms": round(result.duration_ms, 3),
-                },
-            )
-            self._notify_observers(document)
-            return enriched
+        self.metrics.enrichment_duration.observe(result.duration_ms / 1000.0)
+        self.metrics.events_enriched.inc({"status": "ok"})
+        self.metrics.decisions.inc({"decision": result.policy_decision.value})
+        logger.info(
+            "Событие обогащено",
+            extra={
+                "sensitivity": sensitivity.level.value,
+                "risk_score": risk.score,
+                "risk_severity": risk.severity.value,
+                "provenance_depth": result.provenance_depth,
+                "policy_decision": result.policy_decision.value,
+                "rules": [p.rule_id for p in result.policies],
+                "duration_ms": round(result.duration_ms, 3),
+            },
+        )
+        self._notify_observers(document)
+        return enriched
 
     def enrich_document(
         self,
