@@ -113,6 +113,32 @@ docker compose --profile trainer run --rm trainer --regression-limit 60
 голова заменяется на 4 класса и выполняется дообучение; SGD с моментом вместо
 AdamW снижает потребление памяти, что важно для машин с 8 ГБ.
 
+### Пороги приёмки и проверка артефактов
+
+Параметры обучения задаются конфигурацией, флаги CLI их перекрывают:
+
+```json
+{"ml": {"training_min_gain": -0.02,
+        "training_regression_limit": 120,
+        "training_min_rows": 20,
+        "training_epochs": 3,
+        "training_learning_rate": 2e-05}}
+```
+
+При регистрации версии считается манифест с контрольными суммами файлов
+(`manifest.json` внутри каталога версии). Проверка:
+
+```bash
+python tools/verify_artifacts.py            # активная версия
+python tools/verify_artifacts.py --all      # все версии
+python tools/verify_artifacts.py --json
+```
+
+Если файлы активной версии не совпадают с манифестом, сервис при выборе модели
+пишет предупреждение в журнал, но продолжает работу. Версиям, зарегистрированным
+до появления манифестов, они проставляются один раз:
+`python tools/bootstrap_manifests.py`.
+
 ## Версии модели и откат
 
 Каждая принятая модель регистрируется как версия в `ml/artifacts/versions.json`

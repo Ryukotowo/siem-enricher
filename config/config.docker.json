@@ -83,7 +83,12 @@
     "hybrid_downgrade_min_rule_confidence": 0.5,
     "hybrid_downgrade_max_model_confidence": 0.85,
     "hybrid_policy_override": true,
-    "hybrid_policy_override_min_weight": 0.8
+    "hybrid_policy_override_min_weight": 0.8,
+    "training_min_gain": -0.02,
+    "training_regression_limit": 120,
+    "training_min_rows": 20,
+    "training_epochs": 3,
+    "training_learning_rate": 2e-05
   },
   "provenance": {
     "backend": "${PROVENANCE_BACKEND:-sqlite}",

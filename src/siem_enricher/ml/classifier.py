@@ -317,6 +317,22 @@ def current_tenant_from_ml(config: Any) -> str:
     return str(getattr(service, "tenant", "default") or "default")
 
 
+def _warn_on_tampering(directory: Path) -> None:
+    """Предупредить, если файлы модели не совпадают с манифестом версии."""
+    try:
+        from siem_enricher.ml.registry import verify_manifest
+
+        result = verify_manifest(directory)
+        if result.get("files") and not result.get("ok"):
+            logger.warning(
+                "Артефакт модели не совпадает с манифестом",
+                extra={"path": str(directory), "mismatched": result.get("mismatched"),
+                       "missing": result.get("missing")},
+            )
+    except Exception:  # noqa: BLE001 - проверка не должна мешать запуску
+        pass
+
+
 def resolve_artifact_path(path: str | Path, tenant: str | None = None) -> Path:
     """Выбрать артефакт модели.
 
@@ -342,6 +358,7 @@ def resolve_artifact_path(path: str | Path, tenant: str | None = None) -> Path:
         if active:
             candidate = registry.root / str(active["artifact"])
             if (candidate / "config.json").exists():
+                _warn_on_tampering(candidate)
                 return candidate.resolve()
         active_dir = registry.active_path()
         if (active_dir / "config.json").exists():

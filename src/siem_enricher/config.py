@@ -44,6 +44,11 @@ DEFAULTS: dict[str, Any] = {
         "model_version": "auto",
         "default_level": "internal",
         "confidence_floor": 0.35,
+        "training_min_gain": -0.02,
+        "training_regression_limit": 120,
+        "training_min_rows": 20,
+        "training_epochs": 3,
+        "training_learning_rate": 2e-5,
         "aggregate": "max",
         "max_length": 64,
         "batch_size": 16,
@@ -211,6 +216,11 @@ class MlConfig:
     hybrid_downgrade_min_rule_confidence: float = 0.5
     hybrid_downgrade_max_model_confidence: float = 0.85
     hybrid_policy_override: bool = True
+    training_min_gain: float = -0.02
+    training_regression_limit: int = 120
+    training_min_rows: int = 20
+    training_epochs: int = 3
+    training_learning_rate: float = 2e-5
     hybrid_policy_override_min_weight: float = 0.8
 
 

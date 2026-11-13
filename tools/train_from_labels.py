@@ -158,7 +158,7 @@ def replace_head(model) -> None:
     model.to(model.device if hasattr(model, "device") else torch.device("cpu"))
 
 
-def finetune(model, tokenizer, train: list[dict]) -> None:
+def finetune(model, tokenizer, train: list[dict], epochs: int, learning_rate: float) -> None:
     import torch
 
     index_of = model.config.label2id
@@ -166,9 +166,9 @@ def finetune(model, tokenizer, train: list[dict]) -> None:
     targets = [index_of[row["level"]] for row in train]
     # SGD с моментом вместо AdamW: состояния оптимизатора не удваивают память,
     # что важно для контейнера с ограниченной RAM.
-    optimiser = torch.optim.SGD(model.parameters(), lr=1e-3, momentum=0.9)
+    optimiser = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
     model.train()
-    for epoch in range(1, EPOCHS + 1):
+    for epoch in range(1, epochs + 1):
         order = list(range(len(texts)))
         random.Random(SEED + epoch).shuffle(order)
         total = correct = 0
@@ -203,13 +203,23 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Дообучение по меткам аналитиков")
     parser.add_argument("--input", required=True, help="JSONL из /ui/labels/export")
     parser.add_argument("--dry-run", action="store_true", help="только проверить датасет")
-    parser.add_argument("--regression-limit", type=int, default=120,
+    parser.add_argument("--regression-limit", type=int, default=None,
                         help="сколько путей регрессионного набора проверять (0 — все)")
     parser.add_argument("--tenant", default=None,
                         help="организация: артефакт и отчёт попадут в её каталог")
-    parser.add_argument("--min-gain", type=float, default=-0.02,
+    parser.add_argument("--min-gain", type=float, default=None,
                         help="допустимое падение F1 на отложенной выборке и на регрессии")
     args = parser.parse_args()
+
+    from siem_enricher.config import load_config
+
+    settings = load_config(ROOT / "config" / "config.local.json").ml
+    min_gain = args.min_gain if args.min_gain is not None else settings.training_min_gain
+    regression_limit = (args.regression_limit if args.regression_limit is not None
+                        else settings.training_regression_limit)
+    epochs = settings.training_epochs
+    learning_rate = settings.training_learning_rate
+    min_rows = settings.training_min_rows
 
     tenant = (args.tenant or "default").strip().lower() or "default"
     if tenant != "default":
@@ -222,7 +232,7 @@ def main() -> int:
     strong = [row for row in rows if row.get("strength") == "strong"]
     weak = [row for row in rows if row.get("strength") != "strong"]
     print(f"меток всего: {len(rows)} (сильных {len(strong)}, слабых {len(weak)})")
-    if len(rows) < MIN_ROWS:
+    if len(rows) < min_rows:
         print(f"меток мало для обучения: {len(rows)} (нужно минимум {MIN_ROWS})")
         return 1
 
@@ -235,8 +245,8 @@ def main() -> int:
     print(f"обучение {len(train)}, отложенная {len(holdout)}, по классам {counts}")
 
     regression = load_jsonl(REGRESSION_SET)
-    if args.regression_limit and len(regression) > args.regression_limit:
-        regression = regression[:args.regression_limit]
+    if regression_limit and len(regression) > regression_limit:
+        regression = regression[:regression_limit]
     print(f"регрессионный набор: {len(regression)} путей")
 
     if args.dry_run:
@@ -269,7 +279,7 @@ def main() -> int:
     replace_head(model)
     if hasattr(model, "gradient_checkpointing_enable"):
         model.gradient_checkpointing_enable()
-    finetune(model, tokenizer, train)
+    finetune(model, tokenizer, train, epochs, learning_rate)
 
     print("\n=== новая модель ===")
     after = metrics([(row["level"], pred) for row, pred in
@@ -282,7 +292,7 @@ def main() -> int:
 
     gain = after["F1"] - before["F1"]
     regression_delta = (after_reg["F1"] - before_reg["F1"]) if (after_reg and before_reg) else 0.0
-    accepted = gain >= args.min_gain and regression_delta >= args.min_gain
+    accepted = gain >= min_gain and regression_delta >= min_gain
 
     registry = ModelRegistry(tenant)
     if accepted:
@@ -319,7 +329,7 @@ def main() -> int:
         "артефакт": str(OUTPUT_ARTIFACT) if accepted else None,
     }, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    print(f"\nприрост на отложенной: {gain:+.3f} (порог {args.min_gain:+.3f})")
+    print(f"\nприрост на отложенной: {gain:+.3f} (порог {min_gain:+.3f})")
     if before_reg and after_reg:
         print(f"изменение на регрессии: {regression_delta:+.3f}")
     if accepted:

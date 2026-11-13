@@ -18,6 +18,14 @@ ACTIVE_NAME = "sensitivity_feedback"
 KEEP_VERSIONS = 5
 
 
+def _manifest_fingerprint(manifest: dict[str, Any]) -> str:
+    """Короткий отпечаток набора файлов версии."""
+    import hashlib
+
+    payload = json.dumps(manifest, ensure_ascii=False, sort_keys=True).encode("utf-8")
+    return "sha256:" + hashlib.sha256(payload).hexdigest()[:16]
+
+
 def _now() -> str:
     return datetime.now(tz=UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
 
@@ -26,6 +34,59 @@ def tenant_root(tenant: str, base: Path | None = None) -> Path:
     """Каталог артефактов организации."""
     base = base or (Path.cwd() / "ml" / "artifacts")
     return base if tenant in ("", "default") else base / tenant
+
+
+MANIFEST_NAME = "manifest.json"
+
+
+def _sha256(path: Path) -> str:
+    import hashlib
+
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def build_manifest(directory: Path) -> dict[str, Any]:
+    """Контрольные суммы всех файлов каталога модели."""
+    files = {}
+    for item in sorted(directory.rglob("*")):
+        if item.is_file() and item.name != MANIFEST_NAME:
+            files[str(item.relative_to(directory)).replace("\\", "/")] = {
+                "size": item.stat().st_size,
+                "sha256": _sha256(item),
+            }
+    return {"files": files}
+
+
+def verify_manifest(directory: Path, manifest: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Сверить файлы каталога с манифестом."""
+    if manifest is None:
+        path = directory / MANIFEST_NAME
+        if not path.exists():
+            return {"ok": False, "reason": "нет манифеста", "mismatched": [], "missing": []}
+        import json
+
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+
+    expected = (manifest or {}).get("files") or {}
+    mismatched, missing = [], []
+    for name, info in expected.items():
+        target = directory / name
+        if not target.exists():
+            missing.append(name)
+            continue
+        if target.stat().st_size != info.get("size") or _sha256(target) != info.get("sha256"):
+            mismatched.append(name)
+    return {
+        "ok": not mismatched and not missing,
+        "reason": "" if not mismatched and not missing else "файлы изменены или отсутствуют",
+        "mismatched": mismatched,
+        "missing": missing,
+        "files": len(expected),
+    }
 
 
 class ModelRegistry:
@@ -82,8 +143,14 @@ class ModelRegistry:
             shutil.rmtree(target)
         shutil.copytree(source, target)
 
+        manifest = build_manifest(target)
+        (target / MANIFEST_NAME).write_text(
+            json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
+
         record = {
             "id": version_id,
+            "manifest_fingerprint": _manifest_fingerprint(manifest),
             "created": _now(),
             "note": note,
             "actor": actor,
@@ -97,6 +164,25 @@ class ModelRegistry:
         self._materialise(target)
         self._prune(data)
         return record
+
+    def verify(self, version_id: str | None = None) -> dict[str, Any]:
+        """Проверить целостность версии (по умолчанию активной)."""
+        data = self.load()
+        target_version = None
+        if version_id:
+            target_version = next((item for item in data.get("versions") or []
+                                   if item.get("id") == version_id), None)
+        else:
+            active_id = data.get("active")
+            target_version = next((item for item in data.get("versions") or []
+                                   if item.get("id") == active_id), None)
+        if target_version is None:
+            return {"ok": False, "reason": "версия не найдена", "version": version_id}
+        directory = self.root / str(target_version["artifact"])
+        result = verify_manifest(directory)
+        result["version"] = target_version["id"]
+        result["artifact"] = str(target_version["artifact"])
+        return result
 
     def rollback(self, version_id: str | None = None, *, actor: str = "trainer") -> dict[str, Any]:
         """Сделать активной предыдущую или указанную версию."""
