@@ -169,7 +169,8 @@ PANEL_HTML = """<!DOCTYPE html>
   <h1>Обогащение событий SIEM — панель аналитика</h1>
   <div class="stats">
     <div class="live" id="live"><i></i><span id="live-text">поток</span></div>
-    <div><b id="c-total">0</b>событий</div>
+    <div><b id="c-total">0</b>обработано всего</div>
+    <div><b id="c-buf">0</b>в буфере</div>
     <div><b id="c-crit">0</b>критичных</div>
     <div><b id="c-block">0</b>решений о блокировке</div>
     <div><b id="c-fp">0</b>открытых файлов</div>
@@ -426,7 +427,11 @@ function render() {
   renderDashboard();
   const body = document.getElementById('rows');
   document.getElementById('empty').style.display = rows.length ? 'none' : 'block';
-  document.getElementById('c-total').textContent = DATA.length;
+  const STATS = window.__stats || {};
+  document.getElementById('c-total').textContent =
+    (STATS.seen !== undefined ? STATS.seen : DATA.length);
+  const bufCell = document.getElementById('c-buf');
+  if (bufCell) bufCell.textContent = DATA.length + ' из ' + (STATS.capacity || 500);
   document.getElementById('c-crit').textContent = DATA.filter(e => e.severity === 'critical').length;
   document.getElementById('c-block').textContent = DATA.filter(e => e.decision === 'block').length;
   document.getElementById('c-fp').textContent = DATA.filter(e => e.sensitivity === 'public').length;
@@ -598,6 +603,7 @@ async function refresh() {
   try {
     const payload = await loadEvents();
     DATA = payload.events || [];
+  window.__stats = payload.stats || {};
     if (!SELECTED) {
       const first = DATA.find(item => item.decision === 'block') || DATA[0];
       if (first) { select(first.event_id); return; }
@@ -1009,6 +1015,8 @@ class EventBuffer:
     def __init__(self, size: int = 500) -> None:
         self._items: deque[dict[str, Any]] = deque(maxlen=size)
         self._subscribers: list[Any] = []
+        self._seen = 0
+        self._replaced = 0
 
     def subscribe(self, callback: Any) -> None:
         """Подписать получателя на новые события (SSE-поток панели)."""
@@ -1016,9 +1024,12 @@ class EventBuffer:
 
     def add(self, document: dict[str, Any]) -> None:
         record = compact(document)
+        self._seen += 1
         if record.get("event_id"):
-            self._items = deque((i for i in self._items if i.get("event_id") != record["event_id"]),
-                                maxlen=self._items.maxlen)
+            kept = [i for i in self._items if i.get("event_id") != record["event_id"]]
+            if len(kept) != len(self._items):
+                self._replaced += 1
+            self._items = deque(kept, maxlen=self._items.maxlen)
         self._items.append(record)
         for callback in list(self._subscribers):
             try:
@@ -1038,6 +1049,9 @@ class EventBuffer:
         items = list(self._items)
         return {
             "total": len(items),
+            "seen": self._seen,
+            "replaced": self._replaced,
+            "capacity": self._items.maxlen,
             "critical": sum(1 for item in items if item.get("severity") == "critical"),
             "blocked": sum(1 for item in items if item.get("decision") == "block"),
         }
@@ -1141,9 +1155,18 @@ def _demo_state(app: Any) -> dict[str, Any]:
     state = getattr(app.state, DEMO_KEY, None)
     if state is None:
         state = {"running": False, "interval": 2.0, "scenario": "mixed",
-                 "sent": 0, "task": None}
+                 "sent": 0, "task": None, "seq": 0}
         setattr(app.state, DEMO_KEY, state)
     return state
+
+
+def _unique_events(app: Any, events: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Проставить уникальные идентификаторы: генератор повторяет их от запуска к запуску."""
+    state = _demo_state(app)
+    state["seq"] = int(state.get("seq") or 0) + 1
+    for position, event in enumerate(events, 1):
+        event["id"] = f"{1700000000 + state['seq']}.{position:06d}"
+    return events
 
 
 def demo_fill(app: Any, count: int = 25, scenario: str = "mixed") -> dict[str, Any]:
@@ -1161,11 +1184,12 @@ def demo_fill(app: Any, count: int = 25, scenario: str = "mixed") -> dict[str, A
     if pipeline is None:
         return {"ok": False, "error": "сервис не запущен в режиме обработки"}
     buffer = getattr(app.state, "panel_buffer", None)
-    events = build_events(scenario=scenario, count=max(1, min(count, 500)))
+    events = _unique_events(app, build_events(scenario=scenario,
+                                             count=max(1, min(count, 500))))
     sent = 0
     for event in events:
         _, _, document = pipeline.enrich_document("demo", event)
-        if buffer is not None:
+        if buffer is not None and not getattr(app.state, "panel_observed", False):
             buffer.add(document)
         sent += 1
     return {"ok": True, "sent": sent, "scenario": scenario}
@@ -1198,15 +1222,30 @@ async def demo_start(app: Any, interval: float = 2.0, scenario: str = "mixed") -
         from datetime import UTC, datetime
 
         started = datetime.now(tz=UTC).replace(microsecond=0)
+        batch: list[dict[str, Any]] = []
         for event in stream_events(scenario=scenario, interval=0, repeat=0,
                                    start=started):
-            if not state["running"]:
-                break
-            _, _, document = pipeline.enrich_document("demo", event)
-            if buffer is not None:
-                buffer.add(document)
-            state["sent"] += 1
-            await asyncio.sleep(max(0.1, interval))
+            batch.append(event)
+            if len(batch) < 10:
+                continue
+            _unique_events(app, batch)
+            for item in batch:
+                if not state["running"]:
+                    return
+                _, _, document = pipeline.enrich_document("demo", item)
+                if buffer is not None and not getattr(app.state, "panel_observed", False):
+                    buffer.add(document)
+                state["sent"] += 1
+                await asyncio.sleep(max(0.1, interval))
+            batch = []
+        if batch:
+            _unique_events(app, batch)
+            for item in batch:
+                _, _, document = pipeline.enrich_document("demo", item)
+                if buffer is not None:
+                    buffer.add(document)
+                state["sent"] += 1
+        return
 
     state["task"] = asyncio.create_task(loop())
     return {"ok": True, "running": True, "interval": interval, "scenario": scenario}

@@ -136,6 +136,7 @@ def create_app(
     panel_buffer = EventBuffer(500)
     if register_panel(app, panel_buffer):
         pipeline.add_observer(panel_buffer.add)
+        app.state.panel_observed = True
         logger.info("Панель аналитика доступна по адресу /ui (обновляется по мере потока)")
     _install_api_key_guard(app, config)
     app.include_router(routes.router)
