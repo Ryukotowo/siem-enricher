@@ -435,7 +435,7 @@ function render() {
     const color = severityColor(e.severity);
     return `<tr data-id="${e.event_id}" class="${SELECTED === e.event_id ? 'sel' : ''}">
       <td class="num">${(e.ts || '').slice(11, 19)}</td>
-      <td><div class="file">${e.file || '—'}${e.hash_only ? ' <span class="hash" title="имя пришло хэшем, полного имени в событии нет">хэш</span>' : ''}</div><div class="path">${e.directory || ''}</div></td>
+      <td><div class="file">${e.file || '—'}${e.hash_only ? ' <span class="hash" title="имя файла в событии отсутствует — файл известен только по отпечатку">имя скрыто</span>' : ''}</div><div class="path">${e.directory || ''}</div></td>
       <td>${e.action || ''}</td>
       <td><span class="${badgeClass(e.sensitivity)}">${e.sensitivity_ru || e.sensitivity || '—'}</span></td>
       <td class="num">${e.confidence ? e.confidence.toFixed(2) : '—'}</td>
@@ -885,6 +885,9 @@ COMPACT_FIELDS = (
 )
 
 
+HIDDEN_NAME = "(название скрыто)"
+
+
 def _clean_name(name: str | None, path: str | None) -> str:
     """Имя файла для показа: хэши и служебные строки не выдаём за имя файла."""
     name = (name or "").strip()
@@ -892,15 +895,18 @@ def _clean_name(name: str | None, path: str | None) -> str:
         path = (path or "").strip()
         if path and not path.lower().startswith("sha256:"):
             return path.replace("\\", "/").rsplit("/", 1)[-1]
-        return "(файл по хэшу)"
+        return HIDDEN_NAME
     return name
 
 
 def _hash_only(file_info: dict[str, Any]) -> bool:
-    """Имя файла пришло хэшем — объект известен только по отпечатку."""
+    """Имя файла неизвестно — объект известен только по отпечатку."""
     name = str(file_info.get("name") or "").strip().lower()
     path = str(file_info.get("path") or "").strip().lower()
-    return name.startswith("sha256:") or (not name and path.startswith("sha256:"))
+    if name.startswith("sha256:") or (not name and path.startswith("sha256:")):
+        return True
+    hashes = file_info.get("hashes") or {}
+    return bool(hashes) and not name and not path
 
 
 def _chains_dict(document: dict[str, Any]) -> dict[str, Any]:
@@ -956,7 +962,8 @@ def compact(document: dict[str, Any]) -> dict[str, Any]:
         "external": document.get("external_destinations_count"),
         "removable": document.get("removable_destinations_count"),
         "components": document.get("risk_components") or {},
-        "hash_only": _hash_only(file_info),
+        "hash_only": _hash_only(file_info) or _clean_name(
+            file_info.get("name"), file_info.get("path")) == HIDDEN_NAME,
         "steps": _chain_steps(document),
         "endpoints": list(_chains_dict(document).get("external_endpoints") or [])[:6],
         "raw": document.get("raw_event") or None,

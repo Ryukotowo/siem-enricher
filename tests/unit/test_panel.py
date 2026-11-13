@@ -41,11 +41,21 @@ class CompactTest(unittest.TestCase):
         self.assertEqual(record["rules"], ["POL-012"])
         self.assertAlmostEqual(record["risk"], 0.62)
 
+    def test_hash_without_name_is_marked(self) -> None:
+        document = {
+            "@timestamp": "2026-11-13T10:00:00Z", "event_id": "e-hash2",
+            "action": "read", "file": {"hashes": {"sha256": "abc"}, "path": "", "name": ""},
+            "data_sensitivity": "internal", "risk_score": 0.2,
+        }
+        record = compact(document)
+        self.assertTrue(record["hash_only"])
+        self.assertEqual(record["file"], "(название скрыто)")
+
     def test_hash_only_file_is_marked(self) -> None:
         hashed = "sha256:310060f5bcc80e07"
         record = compact(document(file={"name": hashed, "path": hashed, "hash": hashed}))
         self.assertTrue(record["hash_only"])
-        self.assertEqual(record["file"], "(файл по хэшу)")
+        self.assertEqual(record["file"], "(название скрыто)")
 
     def test_name_is_taken_from_path_when_missing(self) -> None:
         record = compact(document(file={"name": "", "path": r"C:\HR\ведомость.xlsx"}))
