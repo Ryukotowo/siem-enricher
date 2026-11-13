@@ -262,6 +262,35 @@ curl -X POST http://localhost:8081/ui/rules/reload
 Если ключ не задан, сервис пишет предупреждение в журнал при старте: режим без
 аутентификации допустим только в изолированном контуре.
 
+## Форма события для `/v1/enrich`
+
+Пути файлов распознаются в нескольких формах. Сильные ключи работают на верхнем
+уровне, слабый `path` — только во вложенном файловом контексте:
+
+```bash
+# сильные ключи
+curl -X POST http://localhost:8081/v1/enrich -H 'Content-Type: application/json' -d '{
+  "event_id": "1", "ts": "2026-11-13T10:00:00Z", "action": "read",
+  "user": "ivanov", "host": "ws-1",
+  "filename": "C:\\Бухгалтерия\\Договор.docx"
+}'
+
+# вложенный файловый объект
+curl -X POST http://localhost:8081/v1/enrich -H 'Content-Type: application/json' -d '{
+  "event_id": "2", "ts": "2026-11-13T10:00:00Z", "action": "copy",
+  "user": "ivanov", "host": "ws-1",
+  "files": [{"path": "C:\\Бухгалтерия\\Договор.docx"}]
+}'
+```
+
+Сильные ключи: `filename`, `filepath`, `fullpath`, `file_name`, `targetfilename`,
+`objectname` и подобные. Слабые: `path`, `name`, `file`, `location` — они
+учитываются только внутри файлового контекста (`files[]`, `file`, `object`).
+
+Если передать `{"path": "C:\\...\\файл.docx"}` на верхнем уровне, путь будет
+проигнорирован, класс останется `internal`, а `sensitivity_method` — `none`.
+Это защита от ложных срабатываний на поле `path` в событиях сети и процессов.
+
 ## Состав (7 модулей)
 
 | № | Модуль | Код |
