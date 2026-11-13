@@ -252,6 +252,14 @@ PANEL_HTML = """<!DOCTYPE html>
 </div>
 <script>
 let DATA = [], SELECTED = null;
+let SEEN = 0, MAX_ROWS = 200, MODAL_OPEN = false, RENDER_QUEUED = false;
+
+function scheduleRender() {
+  if (RENDER_QUEUED) return;
+  RENDER_QUEUED = true;
+  const run = () => { RENDER_QUEUED = false; render(); };
+  if (window.requestAnimationFrame) requestAnimationFrame(run); else setTimeout(run, 120);
+}
 let FILTERS = {q: '', decisions: new Set(), classes: new Set(), action: '', riskMin: 0};
 let SORT = {key: 'ts', dir: -1};
 
@@ -432,15 +440,16 @@ function render() {
   const rows = visibleRows();
   renderDashboard();
   const body = document.getElementById('rows');
+  const shown = rows.slice(0, MAX_ROWS);
   document.getElementById('empty').style.display = rows.length ? 'none' : 'block';
   const STATS = window.__stats || {};
   document.getElementById('c-total').textContent =
-    (STATS.seen !== undefined ? STATS.seen : DATA.length);
+    Math.max(SEEN || 0, STATS.seen || 0, DATA.length);
   document.getElementById('c-crit').textContent = DATA.filter(e => e.severity === 'critical').length;
   document.getElementById('c-block').textContent = DATA.filter(e => e.decision === 'block').length;
   document.getElementById('c-fp').textContent = DATA.filter(e => e.sensitivity === 'public').length;
   const counter = document.getElementById('counter');
-  if (counter) counter.textContent = `показано ${rows.length} из ${DATA.length}`;
+  if (counter) counter.textContent = `показано ${shown.length} из ${DATA.length}`;
   document.querySelectorAll('th[data-sort]').forEach(th => {
     const arrow = th.dataset.sort === SORT.key ? (SORT.dir > 0 ? ' ▲' : ' ▼') : '';
     th.innerHTML = th.textContent.replace(/[ ▲▼]+$/, '') + arrow;
@@ -650,8 +659,9 @@ function connectStream() {
     try { record = JSON.parse(message.data); } catch (error) { return; }
     if (PAUSED) { PENDING += 1; showPending(); return; }
     DATA = [record, ...DATA.filter(item => item.event_id !== record.event_id)].slice(0, 500);
+    SEEN += 1;
     if (!SELECTED && record.decision === 'block') select(record.event_id);
-    render();
+    if (!MODAL_OPEN) scheduleRender();
   };
 }
 
@@ -676,6 +686,7 @@ const SETTINGS_FIELDS = document.getElementById('settings-fields');
 const SETTINGS_RESULT = document.getElementById('settings-result');
 
 async function openSettings() {
+  MODAL_OPEN = true;
   SETTINGS_RESULT.textContent = '';
   const response = await fetch('/ui/config');
   const payload = await response.json();
@@ -867,8 +878,11 @@ for (const th of document.querySelectorAll('th[data-sort]')) {
     render();
   });
 }
-document.getElementById('settings-cancel').addEventListener('click',
-  () => SETTINGS_BOX.classList.remove('open'));
+document.getElementById('settings-cancel').addEventListener('click', () => {
+  SETTINGS_BOX.classList.remove('open');
+  MODAL_OPEN = false;
+  scheduleRender();
+});
 document.getElementById('settings-save').addEventListener('click', saveSettings);
 
 const demoStart = document.getElementById('demo-start');
