@@ -271,7 +271,7 @@ class HeuristicSensitivityClassifier(SensitivityClassifier):
                 confidence=0.30,
                 method="default",
                 model_version=self.model_version,
-                reason="правила не сработали, применён класс по умолчанию",
+                reason="ни одно правило не дало признаков, класс взят по умолчанию",
                 evidence=feature_importance_hint(features),
                 scores=score_map,
             )

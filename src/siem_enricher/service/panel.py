@@ -172,7 +172,7 @@ PANEL_HTML = """<!DOCTYPE html>
     <div><b id="c-total">0</b>обработано всего</div>
     <div><b id="c-crit">0</b>критичных</div>
     <div><b id="c-block">0</b>решений о блокировке</div>
-    <div><b id="c-fp">0</b>открытых файлов</div>
+    <div><b id="c-fp">0</b>публичных объектов</div>
   </div>
 </header>
 <main>
@@ -242,6 +242,7 @@ PANEL_HTML = """<!DOCTYPE html>
         <button class="cancel" id="demo-start">▶ поток</button>
         <button class="cancel" id="demo-stop">■ стоп</button>
         <button class="cancel" id="demo-fill">+25 событий</button>
+        <button class="cancel" id="demo-incident">инцидент</button>
         <span id="demo-status" style="font-size:12px;color:#5B6470"></span>
       </div>
       <button class="cancel" id="rules-reload">перечитать правила</button>
@@ -910,6 +911,7 @@ document.getElementById('settings-save').addEventListener('click', saveSettings)
 const demoStart = document.getElementById('demo-start');
 const demoStop = document.getElementById('demo-stop');
 const demoFill = document.getElementById('demo-fill');
+const demoIncident = document.getElementById('demo-incident');
 const demoStatus = document.getElementById('demo-status');
 
 async function demoCall(path, body) {
@@ -927,6 +929,10 @@ if (demoStart) {
   demoStop.addEventListener('click', async () => {
     const result = await demoCall('/ui/demo/stop', {});
     if (demoStatus) demoStatus.textContent = 'остановлено, отправлено ' + (result.sent || 0);
+  });
+  demoIncident.addEventListener('click', async () => {
+    const result = await demoCall('/ui/demo/events', {scenario: 'incident'});
+    if (demoStatus) demoStatus.textContent = result.ok ? 'инцидент добавлен' : (result.error || '');
   });
   demoFill.addEventListener('click', async () => {
     const result = await demoCall('/ui/demo/events', {count: 25, scenario: 'mixed'});
@@ -1200,6 +1206,23 @@ def _demo_state(app: Any) -> dict[str, Any]:
     return state
 
 
+def _spread_events(events: list[dict[str, Any]], minutes: float = 0.0) -> list[dict[str, Any]]:
+    """Разложить события по времени назад от текущего момента."""
+    from datetime import UTC, datetime, timedelta
+
+    if not events:
+        return events
+    moment = datetime.now(tz=UTC).replace(microsecond=0)
+    if minutes <= 0:
+        minutes = len(events)
+    step = timedelta(minutes=minutes / max(1, len(events)))
+    start = moment - step * len(events)
+    for position, event in enumerate(events, 1):
+        stamp = start + step * position
+        event["@timestamp"] = stamp.isoformat().replace("+00:00", "Z")
+    return events
+
+
 def _unique_events(app: Any, events: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Уникальные идентификаторы и текущее время: генератор повторяет и то, и другое."""
     from datetime import UTC, datetime, timedelta
@@ -1214,7 +1237,7 @@ def _unique_events(app: Any, events: list[dict[str, Any]]) -> list[dict[str, Any
     return events
 
 
-def demo_fill(app: Any, count: int = 25, scenario: str = "mixed") -> dict[str, Any]:
+def demo_fill(app: Any, count: int | None = 25, scenario: str = "mixed") -> dict[str, Any]:
     """Обогатить пачку сгенерированных событий и положить их в панель."""
     import sys
 
@@ -1229,8 +1252,11 @@ def demo_fill(app: Any, count: int = 25, scenario: str = "mixed") -> dict[str, A
     if pipeline is None:
         return {"ok": False, "error": "сервис не запущен в режиме обработки"}
     buffer = getattr(app.state, "panel_buffer", None)
+    if scenario in {'incident', 'attack'}:
+        count = None  # у сценария фиксированная длина цепочки
     events = _unique_events(app, build_events(scenario=scenario,
-                                             count=max(1, min(count, 500))))
+                                             count=(max(1, min(count, 500)) if count else None)))
+    _spread_events(events, minutes=20 if scenario in {'incident', 'attack'} else 90)
     sent = 0
     for event in events:
         _, _, document = pipeline.enrich_document("demo", event)

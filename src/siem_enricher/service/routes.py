@@ -7,6 +7,7 @@ import time
 from typing import Any
 
 from fastapi import APIRouter, Body, Query, Request, Response
+from fastapi.responses import JSONResponse
 
 from siem_enricher.audit import AuditLogger
 from siem_enricher.logging_setup import get_logger
@@ -105,7 +106,18 @@ async def enrich_batch(
     runtime = _runtime(request)
     events = payload.get("events") if isinstance(payload, dict) else payload
     if not isinstance(events, list):
-        return {"error": "ожидался объект {events: [...]} или список событий", "results": []}
+        return JSONResponse(
+            {"detail": "ожидается массив событий или объект {events: [...]}"},
+            status_code=422,
+        )
+    if len(events) > 500:
+        return JSONResponse(
+            {"detail": "за один запрос принимается не более 500 событий"},
+            status_code=422,
+        )
+    if any(not isinstance(item, dict) for item in events):
+        return JSONResponse({"detail": "каждое событие должно быть объектом"},
+                           status_code=422)
     enriched = await runtime.enrich_documents(events, source=source, apply_policies=apply_policies)
     documents = [item.siem_document() for item in enriched]
     buffer = getattr(request.app.state, "panel_buffer", None)

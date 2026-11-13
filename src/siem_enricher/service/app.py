@@ -18,6 +18,19 @@ from siem_enricher.version import VERSION
 logger = get_logger("service.app")
 
 
+def _install_body_limit(app: Any, limit: int = 2_000_000) -> None:
+    """Отклонять слишком большие тела запросов: защита от случайных и злонамеренных объёмов."""
+    from fastapi.responses import JSONResponse
+
+    @app.middleware("http")
+    async def body_limit(request: Any, call_next: Any) -> Any:
+        declared = request.headers.get("content-length")
+        if declared and declared.isdigit() and int(declared) > limit:
+            return JSONResponse(
+                {"detail": f"тело запроса больше {limit} байт"}, status_code=413
+            )
+        return await call_next(request)
+
 def _install_api_key_guard(app: Any, config: AppConfig) -> None:
     """Разграничить доступ: пишущий ключ меняет состояние, читающий только смотрит.
 
@@ -138,6 +151,7 @@ def create_app(
         pipeline.add_observer(panel_buffer.add)
         app.state.panel_observed = True
         logger.info("Панель аналитика доступна по адресу /ui (обновляется по мере потока)")
+    _install_body_limit(app)
     _install_api_key_guard(app, config)
     app.include_router(routes.router)
     logger.info(
