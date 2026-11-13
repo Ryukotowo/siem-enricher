@@ -81,7 +81,7 @@ services:
       - ./var:/app/var
       - state-data:/app/var/state
       - ./config:/app/config
-      - ./ml/artifacts:/app/ml/artifacts:ro
+      - ./ml:/app/ml
     depends_on:
       redpanda:
         condition: service_healthy
@@ -253,7 +253,7 @@ services:
     volumes:
       - ./var:/app/var
       - ./config:/app/config
-      - ./ml/artifacts:/app/ml/artifacts:ro
+      - ./ml:/app/ml
     networks: [enricher-net]
 
   # --- Наблюдаемость (профиль observability) ---

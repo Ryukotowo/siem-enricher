@@ -134,6 +134,32 @@ python tools/rollback_model.py --tenant org1 --to v20261112-094018
 Каждый откат и каждое обучение пишутся в журнал `var/audit.jsonl`
 (`kind: model_rollback` / `model_training`) и видны в панели в разделе аудита.
 
+## Единый журнал состояния
+
+Модель, правила и конфигурация меняются независимо, поэтому их можно зафиксировать
+согласованно — одной записью в `var/state-history/journal.jsonl`:
+
+```bash
+python tools/state_history.py --capture --note "перед пилотом"
+python tools/state_history.py --list
+python tools/state_history.py --rollback s20261113-065958
+python tools/state_history.py --rollback s20261113-065958 --with-config
+```
+
+Через панель:
+
+```bash
+curl -s http://localhost:8081/ui/state                                   # список
+curl -X POST http://localhost:8081/ui/state/capture -d '{"note":"..."}'  # снимок
+curl -X POST http://localhost:8081/ui/state/rollback -d '{"state":"s2026..."}'  # откат
+```
+
+Снимок содержит активную версию модели, копию `config/rules.json` с хешем и копию
+конфигурации. Откат возвращает модель и правила, перезагружает классификатор и
+пишется в аудит как `state_rollback`. Конфигурация восстанавливается только по
+явному флагу `--with-config`, потому что содержит пути и настройки окружения.
+Хранятся последние 20 состояний.
+
 ## Обратная связь и дообучение
 
 Метки аналитика (подтверждение / ложное срабатывание) сохраняются в `var/labels/analyst_labels.jsonl`.
