@@ -19,33 +19,55 @@ logger = get_logger("service.app")
 
 
 def _install_api_key_guard(app: Any, config: AppConfig) -> None:
-    """Требовать X-API-Key для изменяющих запросов, если ключ задан.
+    """Разграничить доступ: пишущий ключ меняет состояние, читающий только смотрит.
 
-    Чтение панели, метрики и проверки состояния остаются открытыми, чтобы
-    мониторинг и просмотр не зависели от ключа.
+    Ключ принимается заголовком X-API-Key или cookie siem_key (её ставит страница
+    панели при переходе по ссылке с параметром ?key=). Проверки состояния и метрики
+    остаются открытыми для мониторинга.
     """
-    expected = str(getattr(config.http, "api_key", "") or "")
-    if not expected:
-        logger.warning("HTTP API-ключ не задан: изменяющие запросы открыты")
-        return
+    if not (getattr(config.http, "api_key", "") or getattr(config.http, "read_key", "")):
+        logger.warning("HTTP-ключи не заданы: доступ открыт")
 
     import hmac
 
     from fastapi.responses import JSONResponse
 
-    open_paths = {"/healthz", "/readyz", "/ui", "/ui/stream", "/metrics"}
-    open_prefixes = ("/ui/events", "/ui/audit", "/ui/labels", "/ui/state", "/ui/rules/versions")
+    public_paths = {"/healthz", "/readyz", "/metrics", "/ui", "/favicon.ico"}
+    write_methods = {"POST", "PUT", "PATCH", "DELETE"}
+
+    def given(request: Any) -> str:
+        return (request.headers.get("X-API-Key")
+                or request.cookies.get("siem_key")
+                or request.query_params.get("key")
+                or "")
 
     @app.middleware("http")
     async def api_key_guard(request: Any, call_next: Any) -> Any:
-        method = request.method.upper()
+        settings = getattr(request.app.state, "config", config).http
+        write_key = str(getattr(settings, "api_key", "") or "")
+        read_key = str(getattr(settings, "read_key", "") or "")
         path = request.url.path
-        protected = method in {"POST", "PUT", "PATCH", "DELETE"}
-        if protected and path not in open_paths and not path.startswith(open_prefixes):
-            provided = request.headers.get("X-API-Key", "")
-            if not hmac.compare_digest(provided, expected):
-                return JSONResponse({"detail": "требуется заголовок X-API-Key"}, status_code=401)
+        if not write_key and not read_key:
+            return await call_next(request)
+        if path in public_paths:
+            response = await call_next(request)
+            supplied = request.query_params.get("key")
+            if path == "/ui" and supplied:
+                response.set_cookie("siem_key", supplied, httponly=True, samesite="strict")
+            return response
+
+        token = given(request)
+        if request.method.upper() in write_methods:
+            ok = bool(write_key) and hmac.compare_digest(token, write_key)
+            detail = "требуется пишущий ключ (X-API-Key)"
+        else:
+            allowed = [key for key in (read_key, write_key) if key]
+            ok = any(hmac.compare_digest(token, key) for key in allowed) if allowed else True
+            detail = "требуется читающий ключ (X-API-Key)"
+        if not ok:
+            return JSONResponse({"detail": detail}, status_code=401)
         return await call_next(request)
+
 
 def _noop() -> None:
     """Заглушка, чтобы сохранить структуру модуля."""
