@@ -26,6 +26,11 @@ PANEL_HTML = """<!DOCTYPE html>
            align-items:center; justify-content:space-between; }
   header h1 { margin:0; font-size:19px; font-weight:600; letter-spacing:.2px; }
   header .stats { display:flex; gap:22px; font-size:13px; color:#C7D2E5; }
+  header .theme { align-self:center; margin-left:8px; padding:6px 10px; font-size:12px;
+    background:rgba(255,255,255,.12); color:#fff; border:1px solid rgba(255,255,255,.28);
+    border-radius:6px; cursor:pointer; }
+  header .theme:hover { background:rgba(255,255,255,.2); }
+
   header .stats b { color:#fff; font-size:16px; display:block; }
   main { display:grid; grid-template-columns: 1fr 420px; gap:16px; padding:16px 24px; }
   .card { background:#fff; border:1px solid var(--line); border-radius:10px; overflow:hidden; }
@@ -173,6 +178,7 @@ PANEL_HTML = """<!DOCTYPE html>
     <div><b id="c-crit">0</b>критичных</div>
     <div><b id="c-block">0</b>решений о блокировке</div>
     <div><b id="c-fp">0</b>публичных объектов</div>
+    <button class="theme" id="theme" title="светлая или тёмная тема">тема</button>
   </div>
 </header>
 <main>
@@ -205,8 +211,7 @@ PANEL_HTML = """<!DOCTYPE html>
       <button class="ghost" id="reset">сбросить</button>
       <button class="ghost" id="export">CSV</button>
       <button class="ghost" id="pause">пауза</button>
-      <button class="ghost" id="theme">тема</button>
-      <span class="counter" id="label-counter"></span>
+        <span class="counter" id="label-counter"></span>
       <button id="settings-open">настройки</button>
       <span class="counter" id="counter"></span>
     </div>

@@ -44,7 +44,7 @@
           "options": {
             "url": "http://mock-siem:8080/events",
             "timeout_seconds": 5,
-            "batch_size": 1
+            "batch_size": 50
           }
         }
       ]
