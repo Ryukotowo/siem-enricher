@@ -170,7 +170,6 @@ PANEL_HTML = """<!DOCTYPE html>
   <div class="stats">
     <div class="live" id="live"><i></i><span id="live-text">поток</span></div>
     <div><b id="c-total">0</b>обработано всего</div>
-    <div><b id="c-buf">0</b>в буфере</div>
     <div><b id="c-crit">0</b>критичных</div>
     <div><b id="c-block">0</b>решений о блокировке</div>
     <div><b id="c-fp">0</b>открытых файлов</div>
@@ -421,6 +420,13 @@ function renderDashboard() {
   }
 }
 
+function fmtTime(ts) {
+  if (!ts) return '';
+  const date = new Date(ts);
+  if (Number.isNaN(date.getTime())) return (ts || '').slice(11, 19);
+  return date.toLocaleTimeString('ru-RU', {hour12: false});
+}
+
 function render() {
   refreshActions();
   const rows = visibleRows();
@@ -430,8 +436,6 @@ function render() {
   const STATS = window.__stats || {};
   document.getElementById('c-total').textContent =
     (STATS.seen !== undefined ? STATS.seen : DATA.length);
-  const bufCell = document.getElementById('c-buf');
-  if (bufCell) bufCell.textContent = DATA.length + ' из ' + (STATS.capacity || 500);
   document.getElementById('c-crit').textContent = DATA.filter(e => e.severity === 'critical').length;
   document.getElementById('c-block').textContent = DATA.filter(e => e.decision === 'block').length;
   document.getElementById('c-fp').textContent = DATA.filter(e => e.sensitivity === 'public').length;
@@ -445,7 +449,7 @@ function render() {
     const risk = Math.max(0, Math.min(1, e.risk || 0));
     const color = severityColor(e.severity);
     return `<tr data-id="${e.event_id}" class="${SELECTED === e.event_id ? 'sel' : ''}">
-      <td class="num">${(e.ts || '').slice(11, 19)}</td>
+      <td class="num" title="${e.ts || ''}">${fmtTime(e.ts)}</td>
       <td><div class="file">${e.file || '—'}${e.hash_only ? ' <span class="hash" title="имя файла в событии отсутствует — файл известен только по отпечатку">имя скрыто</span>' : ''}</div><div class="path">${e.directory || ''}</div></td>
       <td>${e.action || ''}</td>
       <td><span class="${badgeClass(e.sensitivity)}">${e.sensitivity_ru || e.sensitivity || '—'}</span></td>
@@ -1161,11 +1165,16 @@ def _demo_state(app: Any) -> dict[str, Any]:
 
 
 def _unique_events(app: Any, events: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Проставить уникальные идентификаторы: генератор повторяет их от запуска к запуску."""
+    """Уникальные идентификаторы и текущее время: генератор повторяет и то, и другое."""
+    from datetime import UTC, datetime, timedelta
+
     state = _demo_state(app)
     state["seq"] = int(state.get("seq") or 0) + 1
+    moment = datetime.now(tz=UTC).replace(microsecond=0)
     for position, event in enumerate(events, 1):
         event["id"] = f"{1700000000 + state['seq']}.{position:06d}"
+        stamp = moment + timedelta(milliseconds=position * 100)
+        event["@timestamp"] = stamp.isoformat().replace("+00:00", "Z")
     return events
 
 

@@ -236,10 +236,15 @@ def stream_events(
     attempt = 0
     while True:
         attempt += 1
-        # каждый следующий повтор сдвигаем время, иначе идентификаторы совпадут
-        chunk_start = base + timedelta(seconds=(attempt - 1) * max(1, count or 1))
         chunk = build_events(scenario=scenario, count=count, seed=seed + attempt - 1,
-                             start=chunk_start, host=host)
+                             start=base, host=host)
+        # следующая порция продолжает время последней, иначе события идут не по порядку
+        try:
+            last = max(datetime.fromisoformat(str(e["@timestamp"]).replace("Z", "+00:00"))
+                       for e in chunk)
+            base = last + timedelta(seconds=1)
+        except (KeyError, ValueError):
+            base = base + timedelta(seconds=max(1, count or 1))
         for position, event in enumerate(chunk, 1):
             # идентификатор содержит фиксированную метку времени, поэтому в потоке
             # делаем её уникальной для каждого повтора
