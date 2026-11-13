@@ -216,6 +216,34 @@ def _scenario_specs(scenario: str) -> list[dict[str, Any]]:
     return scenarios[scenario]
 
 
+def stream_events(
+    scenario: str = "mixed",
+    count: int | None = None,
+    seed: int = 42,
+    interval: float = 2.0,
+    repeat: int = 0,
+    start: datetime | None = None,
+    host: str | None = None,
+):
+    """Отдавать события порциями с паузой — для живого потока на стенде.
+
+    ``repeat=0`` означает бесконечный поток, ``interval`` — пауза между событиями.
+    """
+    import time
+
+    attempt = 0
+    while True:
+        attempt += 1
+        chunk = build_events(scenario=scenario, count=count, seed=seed + attempt - 1,
+                             start=start, host=host)
+        for event in chunk:
+            if interval > 0:
+                time.sleep(interval)
+            yield event
+        if repeat and attempt >= repeat:
+            return
+
+
 def build_events(
     scenario: str = "mixed",
     count: int | None = None,
@@ -311,6 +339,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out", default="var/generated_events.jsonl", help="Файл событий (JSONL)")
     parser.add_argument("--labels-out", default=None,
                         help="Файл эталонной разметки (CSV: path,label) для обучения модели")
+    parser.add_argument("--interval", type=float, default=0.0,
+                        help="пауза между событиями в секундах (0 — без пауз)")
+    parser.add_argument("--repeat", type=int, default=1,
+                        help="сколько раз повторить набор (0 — бесконечно)")
     parser.add_argument("--stats-only", action="store_true", help="Не писать события, только сводку")
     args = parser.parse_args(argv)
 

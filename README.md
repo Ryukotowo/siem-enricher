@@ -295,6 +295,44 @@ curl -X POST http://localhost:8081/v1/enrich -H 'Content-Type: application/json'
 проигнорирован, класс останется `internal`, а `sensitivity_method` — `none`.
 Это защита от ложных срабатываний на поле `path` в событиях сети и процессов.
 
+## Поток событий для демонстрации
+
+Три способа наполнить стенд:
+
+**1. Кнопки в панели** (главное для показа):
+
+- «▶ поток» — непрерывная подача событий, интервал 2 с;
+- «■ стоп» — остановить поток;
+- «+25 событий» — разовая порция.
+
+Те же действия через API:
+
+```bash
+curl -s http://localhost:8081/ui/demo                                   # состояние
+curl -X POST http://localhost:8081/ui/demo/start -d '{"interval":2}'    # запустить
+curl -X POST http://localhost:8081/ui/demo/stop  -d '{}'                # остановить
+curl -X POST http://localhost:8081/ui/demo/events -d '{"count":50}'     # порция
+```
+
+**2. Поток через Kafka** (полный путь: брокер → конвейер → приёмники):
+
+```bash
+PRODUCER_INTERVAL=3 PRODUCER_COUNT=10 docker compose --profile producer up -d producer-loop
+docker compose stop producer-loop
+```
+
+**3. Разовый прогон генератора**:
+
+```bash
+docker compose --profile producer run --rm producer      # 120 событий
+
+docker exec siem-enricher python /app/tools/generate_sample_events.py \
+  --scenario ransomware --count 40 --out /tmp/night.jsonl
+```
+
+Сценарии генератора: `mixed`, `benign`, `ransomware`, `public`. Параметры потока:
+`--interval` (пауза, секунды), `--repeat` (`0` — бесконечно).
+
 ## Состав (7 модулей)
 
 | № | Модуль | Код |

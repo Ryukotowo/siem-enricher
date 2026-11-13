@@ -127,6 +127,26 @@ services:
     restart: unless-stopped
 
   # --- Поставщик синтетических событий (профиль producer) ---
+  producer-loop:
+    image: siem-enricher:0.2.0
+    profiles: ["producer"]
+    container_name: siem-enricher-producer-loop
+    depends_on:
+      redpanda:
+        condition: service_healthy
+      redpanda-init:
+        condition: service_completed_successfully
+    environment:
+      INTERVAL: "${PRODUCER_INTERVAL:-5}"
+      SCENARIO: "${PRODUCER_SCENARIO:-mixed}"
+      COUNT: "${PRODUCER_COUNT:-10}"
+    entrypoint: ["/bin/sh", "/app/deploy/demo/producer_loop.sh"]
+    volumes:
+      - ./var:/app/var
+      - ./deploy/demo/producer_loop.sh:/app/deploy/demo/producer_loop.sh:ro
+    networks: [enricher-net]
+    restart: unless-stopped
+
   producer:
     image: siem-enricher:0.2.0
     profiles: ["producer"]
