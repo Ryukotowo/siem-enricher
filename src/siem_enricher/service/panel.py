@@ -351,6 +351,10 @@ function bucketKey(value) {
 
 function sparkline(series, color, max) {
   if (!series.length) return '';
+  if (series.length === 1) {
+    const y = 50 - (series[0] / max) * 40;
+    return `<circle cx="160" cy="${y.toFixed(1)}" r="3" fill="${color}"></circle>`;
+  }
   const step = series.length > 1 ? 300 / (series.length - 1) : 0;
   const points = series.map((value, index) => {
     const x = 10 + index * step;
@@ -375,17 +379,27 @@ function renderDashboard() {
   if (!spark) return;
   try {
 
-  const buckets = new Map();
-  const blocked = new Map();
-  for (const event of DATA) {
-    const key = bucketKey(event.ts);
-    if (!key) continue;
-    buckets.set(key, (buckets.get(key) || 0) + 1);
-    if (event.decision === 'block') blocked.set(key, (blocked.get(key) || 0) + 1);
+  const moments = DATA
+    .map(event => new Date(event.ts || 0))
+    .filter(date => !Number.isNaN(date.getTime()));
+  const slots = 18;
+  const slotMs = 10 * 60 * 1000;
+  const latest = moments.length ? Math.max(...moments.map(d => d.getTime())) : Date.now();
+  const startSlot = Math.floor(latest / slotMs) - slots + 1;
+  const totals = new Array(slots).fill(0);
+  const blocks = new Array(slots).fill(0);
+  for (const date of moments) {
+    const index = Math.floor(date.getTime() / slotMs) - startSlot;
+    if (index < 0 || index >= slots) continue;
+    totals[index] += 1;
   }
-  const keys = Array.from(buckets.keys()).sort();
-  const totals = keys.map(key => buckets.get(key));
-  const blocks = keys.map(key => blocked.get(key) || 0);
+  for (const event of DATA) {
+    if (event.decision !== 'block') continue;
+    const date = new Date(event.ts || 0);
+    if (Number.isNaN(date.getTime())) continue;
+    const index = Math.floor(date.getTime() / slotMs) - startSlot;
+    if (index >= 0 && index < slots) blocks[index] += 1;
+  }
   const max = Math.max(1, ...totals, ...blocks);
   spark.innerHTML = sparkline(totals, '#1F5FC0', max) + sparkline(blocks, '#B3261E', max);
 
@@ -397,14 +411,22 @@ function renderDashboard() {
   const ruleTotal = Math.max(1, ...rules.map(item => item[1]));
   document.getElementById('top-rules').innerHTML = topList(rules, ruleTotal);
 
+  const HIDDEN_LABEL = '(название скрыто)';
   const fileCounts = new Map();
+  let hiddenCount = 0;
   for (const event of DATA) {
     const name = event.file || '—';
+    if (event.hash_only || name === HIDDEN_LABEL) { hiddenCount += 1; continue; }
     fileCounts.set(name, (fileCounts.get(name) || 0) + 1);
   }
   const files = Array.from(fileCounts.entries()).sort((a, b) => b[1] - a[1]);
   const fileTotal = Math.max(1, ...files.map(item => item[1]));
-  document.getElementById('top-files').innerHTML = topList(files, fileTotal);
+  let filesHtml = topList(files, fileTotal);
+  if (hiddenCount) {
+    filesHtml += '<div class="bar-row"><div><div class="name">имя не раскрывается</div></div>' +
+      '<div class="num">' + hiddenCount + '</div></div>';
+  }
+  document.getElementById('top-files').innerHTML = filesHtml;
 
   const colors = {secret: '#B3261E', confidential: '#C26A00', internal: '#1F5FC0', public: '#2E7D32'};
   const labels = {secret: 'secret', confidential: 'confidential', internal: 'internal', public: 'public'};
