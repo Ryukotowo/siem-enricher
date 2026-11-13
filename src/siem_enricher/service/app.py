@@ -61,8 +61,11 @@ def _install_api_key_guard(app: Any, config: AppConfig) -> None:
             ok = bool(write_key) and hmac.compare_digest(token, write_key)
             detail = "требуется пишущий ключ (X-API-Key)"
         else:
-            allowed = [key for key in (read_key, write_key) if key]
-            ok = any(hmac.compare_digest(token, key) for key in allowed) if allowed else True
+            if not read_key:
+                ok = True  # читающий ключ не задан — чтение открыто
+            else:
+                allowed = [key for key in (read_key, write_key) if key]
+                ok = any(hmac.compare_digest(token, key) for key in allowed)
             detail = "требуется читающий ключ (X-API-Key)"
         if not ok:
             return JSONResponse({"detail": detail}, status_code=401)
