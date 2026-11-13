@@ -262,6 +262,7 @@ class HttpConfig:
 @dataclass(slots=True)
 class RuntimeConfig:
     workers: int = 1
+    parallel: bool = True
     queue_max_size: int = 10000
     shutdown_grace_seconds: int = 15
     checkpoint_path: str = "var/state/checkpoint.json"

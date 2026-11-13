@@ -57,18 +57,36 @@ class EnrichmentRuntime:
         )
         self.started_at = time.monotonic()
         monitor = asyncio.create_task(self._monitor_uptime())
+        workers = max(1, int(getattr(self.config.runtime, "workers", 1)))
+        semaphore = asyncio.Semaphore(workers)
+        inflight: set[asyncio.Task[Any]] = set()
         try:
             async with source, sink:
                 async for event in source.stream():
                     if self._stopping:
                         break
-                    await self._handle_event(event, source, sink)
+                    if workers == 1:
+                        await self._handle_event(event, source, sink)
+                    else:
+                        await semaphore.acquire()
+
+                        async def process(item: Any) -> None:
+                            try:
+                                await self._handle_event(item, source, sink)
+                            finally:
+                                semaphore.release()
+
+                        task = asyncio.create_task(process(event))
+                        inflight.add(task)
+                        task.add_done_callback(inflight.discard)
                     if max_events and self.processed >= max_events:
                         logger.info("Достигнут предел обработанных событий", extra={"max_events": max_events})
                         break
                     if flush_every and self.processed % flush_every == 0:
                         await sink.flush()
         finally:
+            if inflight:
+                await asyncio.gather(*inflight, return_exceptions=True)
             monitor.cancel()
             try:
                 await sink.flush()
